@@ -1,6 +1,51 @@
-= Riverbank
+:toc: macro
 
+= Riverbank
 
 Riverbank is a Delta Sharing Server implemented in Rust. The Delta Sharing
 Protocol is still very early on and so this project make see significant
 changes.
+
+toc::[]
+
+.Status
+|===
+
+| Feature | Status
+
+| Bearer authentication security
+| :x:
+
+| Configuring shares
+| :heavy_check_mark:
+
+| Fetching table versions
+| :heavy_check_mark:
+
+| Loading table metadata
+| :x:
+
+| Querying tables
+| :x:
+
+|===
+
+
+== Using
+
+Riverbank uses link:https://rust-lang.org[Rust], which will be needed to build
+and run a local development version of the service.
+
+The `config.yml` should be configured with the test shares desired. Secrets for accessing resources in AWS S3 can be set in the environment or via a `.env` file in the repository root directory, for example:
+
+.The .env file
+[source,bash]
+----
+AWS_REGION=us-east-2
+AWS_ACCESS_KEY_ID=foo
+AWS_SECRET_ACCESS_KEY=bar
+----
+
+You can then run `cargo run` which will start up the development server at `localhost:8000`.
+
+You can use the API documentation at link:http://localhost:8000/apidocs/index.html[localhost:8000/apidocs/index.html].
