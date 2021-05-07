@@ -1,0 +1,13 @@
+#
+# This is an example configuration for riverbank.
+#
+# It is also used for integration testing of riverbank itself
+---
+shares:
+  - name: vaccine_share
+    schemas:
+      - name: acme_vaccine_data
+        tables:
+          - name: vaccine_ingredients
+            location: 's3://delta/acme_vaccine_data/vaccine_ingredients'
+

@@ -21,6 +21,9 @@ tags:
   description: Share discovery APIs
 - name: 'schemas'
   description: Schema discovery APIs
+- name: 'tables'
+  description: Table query and inspection APIs
+
 
 paths:
   '/shares':
@@ -70,7 +73,6 @@ paths:
       summary: 'List the schemas in a share'
       tags:
         - shares
-        - schemas
       security:
         - BearerAuth: []
       parameters:
@@ -111,10 +113,10 @@ paths:
           description: The named share could not be found
 
   '/shares/{share}/schemas/{schema}/tables':
+    get:
       operationId: 'ListTables'
       summary: "List the tables in a given share's schema"
       tags:
-        - shares
         - schemas
       security:
         - BearerAuth: []
@@ -304,7 +306,7 @@ components:
           items:
             $ref: '#/components/schemas/Table'
     Table:
-      type: objkect
+      type: object
       properties:
         name: &tableName
           type: string

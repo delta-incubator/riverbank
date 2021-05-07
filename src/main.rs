@@ -4,13 +4,19 @@
 
 use log::*;
 
+mod config;
+mod routes;
 
 #[async_std::main]
 async fn main() -> Result<(), tide::Error> {
     pretty_env_logger::init();
     dotenv::dotenv().ok();
 
-    let mut app = tide::new();
+    let conf = config::Config::from_file("config.yml").expect("Failed to load configuration");
+    info!("conf: {:?}", conf);
+    let mut app = tide::with_state(conf);
+
+    routes::v1::register(&mut app);
 
     #[cfg(debug_assertions)]
     {
