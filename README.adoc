@@ -1,0 +1,6 @@
+= Riverbank
+
+
+Riverbank is a Delta Sharing Server implemented in Rust. The Delta Sharing
+Protocol is still very early on and so this project make see significant
+changes.
