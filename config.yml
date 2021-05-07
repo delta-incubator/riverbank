@@ -4,6 +4,13 @@
 # It is also used for integration testing of riverbank itself
 ---
 shares:
+  - name: rtyler
+    schemas:
+      - name: samples
+        tables:
+          - name: covid19-nyt
+            location: 's3://delta-riverbank/COVID-19_NYT'
+
   - name: vaccine_share
     schemas:
       - name: acme_vaccine_data

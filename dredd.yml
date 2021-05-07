@@ -4,8 +4,8 @@ dry-run: null
 hookfiles: null
 language: nodejs
 require: null
-server: cargo run
-server-wait: 3
+#server: cargo run
+#server-wait: 3
 init: false
 custom: {}
 names: false

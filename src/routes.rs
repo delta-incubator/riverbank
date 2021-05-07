@@ -10,6 +10,7 @@
  */
 pub mod v1 {
     use crate::config::Config;
+    use log::*;
     use tide::{Body, Request};
     use serde::Serialize;
     use serde_json::json;
@@ -18,6 +19,7 @@ pub mod v1 {
         app.at("/api/v1/shares").get(list_shares);
         app.at("/api/v1/shares/:share/schemas").get(list_schemas);
         app.at("/api/v1/shares/:share/schemas/:schema/tables").get(list_tables);
+        app.at("/api/v1/shares/:share/schemas/:schema/tables/:table").get(latest_version);
     }
 
     /**
@@ -87,6 +89,24 @@ pub mod v1 {
 
         Body::from_json(&tables)
     }
+
+    /**
+     * HEAD /shares/{share}/schemas/{schema}/tables/{table}
+     * operationId: GetTableVersoin
+     */
+    async fn latest_version(req: Request<Config>) -> Result<tide::Response, tide::Error> {
+        let config = req.state();
+        let named_share = req.param("share")?;
+        let named_schema = req.param("schema")?;
+        let named_table = req.param("table")?;
+
+        let table = deltalake::open_table("s3://delta-riverbank/COVID-19_NYT").await?;
+
+        Ok(tide::Response::builder(200)
+            .header("Delta-Table-Version", table.version.to_string())
+            .build())
+    }
+
 
     #[derive(Clone, Debug, Serialize)]
     struct PaginatedResponse {
