@@ -19,6 +19,23 @@ impl Config {
 
         Ok(c)
     }
+
+    pub fn named_table(&self, share: &str, schema: &str, table: &str) -> Option<&Table> {
+        for s in &self.shares {
+            if share == s.name {
+                for sc in &s.schemas {
+                    if schema == sc.name {
+                        for t in &sc.tables {
+                            if table == t.name {
+                                return Some(&t);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]

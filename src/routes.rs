@@ -20,6 +20,8 @@ pub mod v1 {
         app.at("/api/v1/shares/:share/schemas").get(list_schemas);
         app.at("/api/v1/shares/:share/schemas/:schema/tables").get(list_tables);
         app.at("/api/v1/shares/:share/schemas/:schema/tables/:table").get(latest_version);
+        app.at("/api/v1/shares/:share/schemas/:schema/tables/:table/metadata").get(table_metadata);
+        app.at("/api/v1/shares/:share/schemas/:schema/tables/:table/query").post(query);
     }
 
     /**
@@ -92,7 +94,7 @@ pub mod v1 {
 
     /**
      * HEAD /shares/{share}/schemas/{schema}/tables/{table}
-     * operationId: GetTableVersoin
+     * operationId: GetTableVersion
      */
     async fn latest_version(req: Request<Config>) -> Result<tide::Response, tide::Error> {
         let config = req.state();
@@ -100,13 +102,44 @@ pub mod v1 {
         let named_schema = req.param("schema")?;
         let named_table = req.param("table")?;
 
-        let table = deltalake::open_table("s3://delta-riverbank/COVID-19_NYT").await?;
+        if let Some(table) = config.named_table(named_share, named_schema, named_table) {
+            let table = deltalake::open_table(&table.location).await?;
 
-        Ok(tide::Response::builder(200)
-            .header("Delta-Table-Version", table.version.to_string())
-            .build())
+            return Ok(tide::Response::builder(200)
+                .header("Delta-Table-Version", table.version.to_string())
+                .build());
+        }
+        Ok(tide::Response::builder(404).build())
     }
 
+    /**
+     * GET /shares/{share}/schemas/{schema}/tables/{table}/metadata
+     * operationId: GetTableMetadata
+     */
+    async fn table_metadata(req: Request<Config>) -> Result<tide::Response, tide::Error> {
+        let config = req.state();
+        let named_share = req.param("share")?;
+        let named_schema = req.param("schema")?;
+        let named_table = req.param("table")?;
+
+        if let Some(table) = config.named_table(named_share, named_schema, named_table) {
+            let table = deltalake::open_table(&table.location).await?;
+
+            return Ok(tide::Response::builder(200)
+                .header("Delta-Table-Version", table.version.to_string())
+                .body("not yet implemented")
+                .build());
+        }
+        Ok(tide::Response::builder(404).build())
+    }
+
+    /**
+     * POST /shares/{share}/schemas/{schema}/tables/{table}/query
+     * operationId: QueryTable
+     */
+    async fn query(req: Request<Config>) -> Result<tide::Response, tide::Error> {
+        Ok(tide::Response::builder(404).build())
+    }
 
     #[derive(Clone, Debug, Serialize)]
     struct PaginatedResponse {
@@ -127,6 +160,12 @@ pub mod v1 {
     #[derive(Clone, Debug, Serialize)]
     struct Share {
         name: String,
+    }
+
+    #[derive(Clone, Debug, Serialize)]
+    struct Protocol {
+        #[serde(rename="minReaderVersion")]
+        min_reader: u64,
     }
 }
 
