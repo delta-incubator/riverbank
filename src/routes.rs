@@ -103,6 +103,7 @@ pub mod v1 {
         let named_table = req.param("table")?;
 
         if let Some(table) = config.named_table(named_share, named_schema, named_table) {
+            debug!("Opening table at {}", &table.location);
             let table = deltalake::open_table(&table.location).await?;
 
             return Ok(tide::Response::builder(200)
@@ -115,6 +116,10 @@ pub mod v1 {
     /**
      * GET /shares/{share}/schemas/{schema}/tables/{table}/metadata
      * operationId: GetTableMetadata
+     *
+     * The response from this API is "streaming JSON" which is kind of annoying
+     * and unnecessary, so this function just creates a big string from the two (laffo)
+     * lines of content that the client is expecting.
      */
     async fn table_metadata(req: Request<Config>) -> Result<tide::Response, tide::Error> {
         let config = req.state();
@@ -123,11 +128,28 @@ pub mod v1 {
         let named_table = req.param("table")?;
 
         if let Some(table) = config.named_table(named_share, named_schema, named_table) {
+            debug!("Opening table at {}", &table.location);
             let table = deltalake::open_table(&table.location).await?;
+            let metadata = table.get_metadata()?;
+            // No sense wasting time creating an actual map and then serializing
+            // this value is so simple :shrug:
+            let protocol = format!(r#"{{"protocol":{{"minReaderVersion": {} }}}}"#, table.get_min_reader_version());
+
+            debug!("Metadata loaded: {}", metadata);
+            let metadata = json!(
+                {
+                    "metaData" : {
+                        "id" : metadata.id,
+                        "format" : metadata.format,
+                        "schemaString" : metadata.schema,
+                        "partitionColumns" : metadata.partition_columns
+                    }
+                });
 
             return Ok(tide::Response::builder(200)
                 .header("Delta-Table-Version", table.version.to_string())
-                .body("not yet implemented")
+                // Really gross hacking the "streaming JSON" into place
+                .body(format!("{}\n{}", protocol, metadata))
                 .build());
         }
         Ok(tide::Response::builder(404).build())
