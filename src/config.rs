@@ -3,8 +3,8 @@
  */
 use serde::Deserialize;
 use std::error::Error;
-use std::io::BufReader;
 use std::fs::File;
+use std::io::BufReader;
 use std::path::Path;
 
 #[derive(Clone, Debug, Deserialize)]

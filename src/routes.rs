@@ -11,17 +11,22 @@
 pub mod v1 {
     use crate::config::Config;
     use log::*;
-    use tide::{Body, Request};
+    use rusoto_s3::GetObjectRequest;
     use serde::Serialize;
     use serde_json::json;
+    use tide::{Body, Request};
 
     pub fn register(app: &mut tide::Server<Config>) {
         app.at("/api/v1/shares").get(list_shares);
         app.at("/api/v1/shares/:share/schemas").get(list_schemas);
-        app.at("/api/v1/shares/:share/schemas/:schema/tables").get(list_tables);
-        app.at("/api/v1/shares/:share/schemas/:schema/tables/:table").get(latest_version);
-        app.at("/api/v1/shares/:share/schemas/:schema/tables/:table/metadata").get(table_metadata);
-        app.at("/api/v1/shares/:share/schemas/:schema/tables/:table/query").post(query);
+        app.at("/api/v1/shares/:share/schemas/:schema/tables")
+            .get(list_tables);
+        app.at("/api/v1/shares/:share/schemas/:schema/tables/:table")
+            .get(latest_version);
+        app.at("/api/v1/shares/:share/schemas/:schema/tables/:table/metadata")
+            .get(table_metadata);
+        app.at("/api/v1/shares/:share/schemas/:schema/tables/:table/query")
+            .post(query);
     }
 
     /**
@@ -33,9 +38,7 @@ pub mod v1 {
         let mut shares = PaginatedResponse::default();
 
         for share in &config.shares {
-            shares.items.push(
-                json!({"name" : &share.name})
-            );
+            shares.items.push(json!({"name" : &share.name}));
         }
 
         Body::from_json(&shares)
@@ -53,8 +56,7 @@ pub mod v1 {
         for share in &config.shares {
             if named_share == &share.name {
                 for schema in &share.schemas {
-                    schemas.items.push(
-                        json!({"name" : &schema.name,
+                    schemas.items.push(json!({"name" : &schema.name,
                                "schema" : &share.name}));
                 }
             }
@@ -62,7 +64,6 @@ pub mod v1 {
 
         Body::from_json(&schemas)
     }
-
 
     /**
      * GET /api/v1/shares/{share}/schemas/{schema}/tables
@@ -79,8 +80,7 @@ pub mod v1 {
                 for schema in &share.schemas {
                     if named_schema == &schema.name {
                         for table in &schema.tables {
-                            tables.items.push(
-                                json!({"name" : &table.name,
+                            tables.items.push(json!({"name" : &table.name,
                                     "schema" : &schema.name,
                                     "share" : &share.name}));
                         }
@@ -133,18 +133,21 @@ pub mod v1 {
             let metadata = table.get_metadata()?;
             // No sense wasting time creating an actual map and then serializing
             // this value is so simple :shrug:
-            let protocol = format!(r#"{{"protocol":{{"minReaderVersion": {} }}}}"#, table.get_min_reader_version());
+            let protocol = format!(
+                r#"{{"protocol":{{"minReaderVersion": {} }}}}"#,
+                table.get_min_reader_version()
+            );
 
             debug!("Metadata loaded: {}", metadata);
             let metadata = json!(
-                {
-                    "metaData" : {
-                        "id" : metadata.id,
-                        "format" : metadata.format,
-                        "schemaString" : metadata.schema,
-                        "partitionColumns" : metadata.partition_columns
-                    }
-                });
+            {
+                "metaData" : {
+                    "id" : metadata.id,
+                    "format" : metadata.format,
+                    "schemaString" : metadata.schema,
+                    "partitionColumns" : metadata.partition_columns
+                }
+            });
 
             return Ok(tide::Response::builder(200)
                 .header("Delta-Table-Version", table.version.to_string())
@@ -160,12 +163,85 @@ pub mod v1 {
      * operationId: QueryTable
      */
     async fn query(req: Request<Config>) -> Result<tide::Response, tide::Error> {
+        use rusoto_core::Region;
+        use rusoto_credential::ChainProvider;
+        use rusoto_credential::ProvideAwsCredentials;
+        use rusoto_s3::util::PreSignedRequest;
+
+        let config = req.state();
+        let named_share = req.param("share")?;
+        let named_schema = req.param("schema")?;
+        let named_table = req.param("table")?;
+
+        if let Some(table) = config.named_table(named_share, named_schema, named_table) {
+            debug!("Opening table at {}", &table.location);
+            let table = deltalake::open_table(&table.location).await?;
+            let files = table.get_file_paths();
+            let region = if let Ok(url) = std::env::var("AWS_ENDPOINT_URL") {
+                Region::Custom {
+                    name: std::env::var("AWS_REGION").unwrap_or_else(|_| "custom".to_string()),
+                    endpoint: url,
+                }
+            } else {
+                Region::default()
+            };
+            let options = rusoto_s3::util::PreSignedRequestOption {
+                // TODO: make this configurable
+                expires_in: std::time::Duration::from_secs(300),
+            };
+            let provider = ChainProvider::new();
+            let credentials = provider.credentials().await?;
+            let mut urls = vec![];
+
+            for file in files {
+                let s3obj = deltalake::storage::parse_uri(&file)?.into_s3object()?;
+                let req = GetObjectRequest {
+                    bucket: s3obj.bucket.to_string(),
+                    key: s3obj.key.to_string(),
+                    ..Default::default()
+                };
+                let url = req.get_presigned_url(&region, &credentials, &options);
+                debug!("url: {:?}", url);
+                urls.push(json!(
+                {
+                    "file" : {
+                        "url" : url,
+                    }
+                }));
+            }
+            let metadata = table.get_metadata()?;
+            // No sense wasting time creating an actual map and then serializing
+            // this value is so simple :shrug:
+            let protocol =
+                json!({"protocol":{"minReaderVersion" : table.get_min_reader_version()}});
+
+            debug!("Metadata loaded: {}", metadata);
+            let metadata = json!(
+            {
+                "metaData" : {
+                    "id" : metadata.id,
+                    "format" : metadata.format,
+                    "schemaString" : metadata.schema,
+                    "partitionColumns" : metadata.partition_columns
+                }
+            });
+
+            let mut response = vec![protocol.to_string(), metadata.to_string()];
+            for url in urls {
+                response.push(url.to_string());
+            }
+            return Ok(tide::Response::builder(200)
+                .header("Delta-Table-Version", table.version.to_string())
+                // Really gross hacking the "streaming JSON" into place
+                .body(response.join("\n"))
+                .build());
+        }
         Ok(tide::Response::builder(404).build())
     }
 
     #[derive(Clone, Debug, Serialize)]
     struct PaginatedResponse {
-        #[serde(rename="nextPageToken", skip_serializing_if="Option::is_none")]
+        #[serde(rename = "nextPageToken", skip_serializing_if = "Option::is_none")]
         next_page_token: Option<String>,
         items: Vec<serde_json::Value>,
     }
@@ -186,8 +262,7 @@ pub mod v1 {
 
     #[derive(Clone, Debug, Serialize)]
     struct Protocol {
-        #[serde(rename="minReaderVersion")]
+        #[serde(rename = "minReaderVersion")]
         min_reader: u64,
     }
 }
-

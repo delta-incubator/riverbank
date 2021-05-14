@@ -9,7 +9,8 @@ shares:
       - name: samples
         tables:
           - name: covid19-nyt
-            location: 's3://delta-riverbank/COVID-19_NYT'
+            #location: 's3://delta-riverbank/COVID-19_NYT'
+            location: 's3://data/COVID-19_NYT'
 
   - name: vaccine_share
     schemas:

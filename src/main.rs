@@ -36,7 +36,10 @@ async fn main() -> Result<(), tide::Error> {
         app.at("/apidocs").serve_dir("apidocs/")?;
     }
 
-    if let Some(fd) = std::env::var("LISTEN_FD").ok().and_then(|fd| fd.parse().ok()) {
+    if let Some(fd) = std::env::var("LISTEN_FD")
+        .ok()
+        .and_then(|fd| fd.parse().ok())
+    {
         /*
          * Allow the use of catflag for local development
          *
