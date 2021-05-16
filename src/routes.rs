@@ -130,24 +130,8 @@ pub mod v1 {
         if let Some(table) = config.named_table(named_share, named_schema, named_table) {
             debug!("Opening table at {}", &table.location);
             let table = deltalake::open_table(&table.location).await?;
-            let metadata = table.get_metadata()?;
-            // No sense wasting time creating an actual map and then serializing
-            // this value is so simple :shrug:
-            let protocol = format!(
-                r#"{{"protocol":{{"minReaderVersion": {} }}}}"#,
-                table.get_min_reader_version()
-            );
-
-            debug!("Metadata loaded: {}", metadata);
-            let metadata = json!(
-            {
-                "metaData" : {
-                    "id" : metadata.id,
-                    "format" : metadata.format,
-                    "schemaString" : metadata.schema,
-                    "partitionColumns" : metadata.partition_columns
-                }
-            });
+            let metadata = MetadataResponse::new(table.get_metadata()?);
+            let protocol = ProtocolResponse::from_table(&table);
 
             return Ok(tide::Response::builder(200)
                 .header("Delta-Table-Version", table.version.to_string())
@@ -201,30 +185,14 @@ pub mod v1 {
                     ..Default::default()
                 };
                 let url = req.get_presigned_url(&region, &credentials, &options);
-                debug!("url: {:?}", url);
-                urls.push(json!(
-                {
+                urls.push(json!({
                     "file" : {
                         "url" : url,
                     }
                 }));
             }
-            let metadata = table.get_metadata()?;
-            // No sense wasting time creating an actual map and then serializing
-            // this value is so simple :shrug:
-            let protocol =
-                json!({"protocol":{"minReaderVersion" : table.get_min_reader_version()}});
-
-            debug!("Metadata loaded: {}", metadata);
-            let metadata = json!(
-            {
-                "metaData" : {
-                    "id" : metadata.id,
-                    "format" : metadata.format,
-                    "schemaString" : metadata.schema,
-                    "partitionColumns" : metadata.partition_columns
-                }
-            });
+            let metadata = MetadataResponse::new(table.get_metadata()?);
+            let protocol = ProtocolResponse::from_table(&table);
 
             let mut response = vec![protocol.to_string(), metadata.to_string()];
             for url in urls {
@@ -255,14 +223,90 @@ pub mod v1 {
         }
     }
 
+    /**
+     * ProtocolResponse is a wrapper for JSON serialization of the v1 "protocol" JSON streaming
+     * line.
+     *   {"protocol":{"minReaderVersion":1}}
+     *
+     * In the examples seen to date, it doesn't do much other than wrap JSON around the
+     * minReaderVersion for the delta table
+     */
     #[derive(Clone, Debug, Serialize)]
-    struct Share {
-        name: String,
+    struct ProtocolResponse {
+        protocol: Protocol,
+    }
+
+    impl ProtocolResponse {
+        /**
+         * Generate a ProtocolResponse based on the given DeltaTable
+         */
+        fn from_table(table: &deltalake::DeltaTable) -> Self {
+            Self {
+                protocol: Protocol {
+                    min_reader: table.get_min_reader_version(),
+                },
+            }
+        }
+    }
+
+    impl std::fmt::Display for ProtocolResponse {
+        /**
+         * The fmt() function will be used when generating the outputs for the APIs, so it will
+         * cause the object to be serialized as JSON
+         */
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+            if let Ok(json) = serde_json::to_string(self) {
+                write!(f, "{}", json)
+            } else {
+                error!("Failed to convert ProtocolResponse to JSON");
+                write!(f, "{{}}")
+            }
+        }
     }
 
     #[derive(Clone, Debug, Serialize)]
     struct Protocol {
         #[serde(rename = "minReaderVersion")]
-        min_reader: u64,
+        min_reader: i32,
     }
+
+    /**
+    * MetadataResponse is a wrapper for JSON serialization of the v1 "metaData" JSON streaming
+    * line
+       {"metaData":{"id":"f8d5c169-3d01-4ca3-ad9e-7dc3355aedb2","format":{"provider":"parquet"},"schemaString":"{\"type\":\"struct\",\"fields\":[{\"name\":\"eventTime\",\"type\":\"timestamp\",\"nullable\":true,\"metadata\":{}},{\"name\":\"date\",\"type\":\"date\",\"nullable\":true,\"metadata\":{}}]}","partitionColumns":["date"]}}
+    *
+    */
+    #[derive(Clone, Serialize)]
+    struct MetadataResponse<'a> {
+        #[serde(skip)]
+        inner: &'a deltalake::DeltaTableMetaData,
+    }
+
+    impl<'a> MetadataResponse<'a> {
+        fn new(inner: &'a deltalake::DeltaTableMetaData) -> Self {
+            Self { inner }
+        }
+    }
+
+    impl<'a> std::fmt::Display for MetadataResponse<'a> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+            /*
+             * Not really happy with this hack, but DeltaTableMetaData cannot be directly
+             * serialized to JSON and there's only a few things needed off of the struct for the
+             * purposes of MetadataResponse
+             */
+            let metadata = json!({
+                "metaData" : {
+                    "id" : self.inner.id,
+                    "format" : self.inner.format,
+                    "schemaString" : self.inner.schema,
+                    "partitionColumns" : self.inner.partition_columns
+                }
+            });
+            write!(f, "{}", metadata)
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {}
 }

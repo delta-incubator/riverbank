@@ -17,9 +17,8 @@ async fn main() -> Result<(), tide::Error> {
 
     routes::v1::register(&mut app);
 
-    app.at("/").get(|_| async {
-        Ok(format!("Riverbank {}", env!["CARGO_PKG_VERSION"]))
-    });
+    app.at("/")
+        .get(|_| async { Ok(format!("Riverbank {}", env!["CARGO_PKG_VERSION"])) });
 
     #[cfg(debug_assertions)]
     {
