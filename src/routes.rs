@@ -54,7 +54,7 @@ pub mod v1 {
         let mut schemas = PaginatedResponse::default();
 
         for share in &config.shares {
-            if named_share == &share.name {
+            if named_share == share.name {
                 for schema in &share.schemas {
                     schemas.items.push(json!({"name" : &schema.name,
                                "schema" : &share.name}));
@@ -76,9 +76,9 @@ pub mod v1 {
         let mut tables = PaginatedResponse::default();
 
         for share in &config.shares {
-            if named_share == &share.name {
+            if named_share == share.name {
                 for schema in &share.schemas {
-                    if named_schema == &schema.name {
+                    if named_schema == schema.name {
                         for table in &schema.tables {
                             tables.items.push(json!({"name" : &table.name,
                                     "schema" : &schema.name,
