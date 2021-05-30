@@ -160,7 +160,6 @@ pub mod v1 {
         if let Some(table) = config.named_table(named_share, named_schema, named_table) {
             debug!("Opening table at {}", &table.location);
             let table = deltalake::open_table(&table.location).await?;
-            let files = table.get_file_paths();
             let region = if let Ok(url) = std::env::var("AWS_ENDPOINT_URL") {
                 Region::Custom {
                     name: std::env::var("AWS_REGION").unwrap_or_else(|_| "custom".to_string()),
@@ -177,7 +176,8 @@ pub mod v1 {
             let credentials = provider.credentials().await?;
             let mut urls = vec![];
 
-            for file in files {
+            for add in table.get_actions() {
+                let file = format!("{}/{}", table.table_path, &add.path);
                 let s3obj = deltalake::storage::parse_uri(&file)?.into_s3object()?;
                 let req = GetObjectRequest {
                     bucket: s3obj.bucket.to_string(),
@@ -189,9 +189,9 @@ pub mod v1 {
                     "file" : {
                         "url" : url,
                         "id" : id_from_file(&file),
-                        "date" : "",
-                        "size" : 0,
-                        "stats" : "",
+                        "partitionValues" : add.partition_values,
+                        "size" : add.size,
+                        "stats" : add.stats.as_ref().unwrap_or(&"".to_string()),
                     }
                 }));
             }
@@ -217,7 +217,8 @@ pub mod v1 {
         let parts: Vec<&str> = file.split('/').collect();
         if let Some(filename) = parts.get(parts.len() - 1) {
             // TODO: Move this to a lazy_static!
-            let re = Regex::new(r"part-(\d{5})-([a-z,0-9,\-]{36})-([a-z,0-9]{4}).(\w+).parquet").unwrap();
+            let re = Regex::new(r"part-(\d{5})-([a-z,0-9,\-]{36})-([a-z,0-9]{4}).(\w+).parquet")
+                .unwrap();
             if let Some(captured) = re.captures(filename) {
                 if captured.len() == 5 {
                     return Some(captured.get(2).unwrap().as_str());
@@ -335,7 +336,10 @@ pub mod v1 {
         #[test]
         fn test_id_from_file() {
             let file = "s3://delta-riverbank/COVID-19_NYT/part-00006-d0ec7722-b30c-4e1c-92cd-b4fe8d3bb954-c000.snappy.parquet";
-            assert_eq!(Some("d0ec7722-b30c-4e1c-92cd-b4fe8d3bb954"), id_from_file(&file));
+            assert_eq!(
+                Some("d0ec7722-b30c-4e1c-92cd-b4fe8d3bb954"),
+                id_from_file(&file)
+            );
         }
     }
 }
