@@ -188,6 +188,10 @@ pub mod v1 {
                 urls.push(json!({
                     "file" : {
                         "url" : url,
+                        "id" : id_from_file(&file),
+                        "date" : "",
+                        "size" : 0,
+                        "stats" : "",
                     }
                 }));
             }
@@ -205,6 +209,22 @@ pub mod v1 {
                 .build());
         }
         Ok(tide::Response::builder(404).build())
+    }
+
+    fn id_from_file(file: &str) -> Option<&str> {
+        use regex::Regex;
+
+        let parts: Vec<&str> = file.split('/').collect();
+        if let Some(filename) = parts.get(parts.len() - 1) {
+            // TODO: Move this to a lazy_static!
+            let re = Regex::new(r"part-(\d{5})-([a-z,0-9,\-]{36})-([a-z,0-9]{4}).(\w+).parquet").unwrap();
+            if let Some(captured) = re.captures(filename) {
+                if captured.len() == 5 {
+                    return Some(captured.get(2).unwrap().as_str());
+                }
+            }
+        }
+        None
     }
 
     #[derive(Clone, Debug, Serialize)]
@@ -309,5 +329,13 @@ pub mod v1 {
     }
 
     #[cfg(test)]
-    mod tests {}
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_id_from_file() {
+            let file = "s3://delta-riverbank/COVID-19_NYT/part-00006-d0ec7722-b30c-4e1c-92cd-b4fe8d3bb954-c000.snappy.parquet";
+            assert_eq!(Some("d0ec7722-b30c-4e1c-92cd-b4fe8d3bb954"), id_from_file(&file));
+        }
+    }
 }
