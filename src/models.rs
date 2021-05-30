@@ -1,5 +1,8 @@
 use chrono::{DateTime, Utc};
+use deltalake::{DeltaTable, DeltaTableError, DeltaTableMetaData};
+use serde::Serialize;
 use sqlx::PgPool;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]
@@ -53,10 +56,11 @@ impl Schema {
  *
  * Consult the accessors for types of data which can be brought out of the model
  */
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Table {
     inner: PrimitiveTable,
     schema: Schema,
+    delta_table: Option<DeltaTable>,
 }
 
 impl Table {
@@ -74,18 +78,91 @@ impl Table {
     pub fn share(&self) -> &str {
         &self.schema.share_name
     }
-}
 
-#[derive(Clone, Debug)]
-struct PrimitiveTable {
-    id: Uuid,
-    name: String,
-    location: String,
-    schema_id: Uuid,
-    created_at: DateTime<Utc>,
-}
+    pub async fn load_delta(&mut self) -> Result<(), DeltaTableError> {
+        self.delta_table = Some(deltalake::open_table(&self.inner.location).await?);
+        Ok(())
+    }
 
-impl Table {
+    pub fn delta_version(&mut self) -> Result<String, DeltaTableError> {
+        if let Some(delta) = &self.delta_table {
+            return Ok(delta.version.to_string());
+        }
+        Err(DeltaTableError::NotATable)
+    }
+
+    pub fn protocol(&mut self) -> Result<Protocol, DeltaTableError> {
+        if let Some(delta) = &self.delta_table {
+            return Ok(Protocol {
+                min_reader: delta.get_min_reader_version(),
+            });
+        }
+        Err(DeltaTableError::NotATable)
+    }
+
+    pub fn metadata(&mut self) -> Result<Metadata, DeltaTableError> {
+        if let Some(delta) = &self.delta_table {
+            return Ok(Metadata::from_metadata(delta.get_metadata()?));
+        }
+        Err(DeltaTableError::NotATable)
+    }
+
+    pub async fn urls(&mut self) -> Result<Vec<serde_json::Value>, DeltaTableError> {
+        use rusoto_core::Region;
+        use rusoto_credential::ChainProvider;
+        use rusoto_credential::ProvideAwsCredentials;
+        use rusoto_s3::util::PreSignedRequest;
+        use rusoto_s3::GetObjectRequest;
+        use serde_json::json;
+
+        match &self.delta_table {
+            None => Err(DeltaTableError::NotATable),
+            Some(delta) => {
+                let mut urls = vec![];
+
+                let region = if let Ok(url) = std::env::var("AWS_ENDPOINT_URL") {
+                    Region::Custom {
+                        name: std::env::var("AWS_REGION").unwrap_or_else(|_| "custom".to_string()),
+                        endpoint: url,
+                    }
+                } else {
+                    Region::default()
+                };
+                let options = rusoto_s3::util::PreSignedRequestOption {
+                    // TODO: make this configurable
+                    expires_in: std::time::Duration::from_secs(300),
+                };
+                let provider = ChainProvider::new();
+                // TODO map the error
+                let credentials = provider
+                    .credentials()
+                    .await
+                    .expect("Failed to get credentials");
+
+                for add in delta.get_actions() {
+                    let file = format!("{}/{}", delta.table_path, &add.path);
+                    let s3obj = deltalake::storage::parse_uri(&file)?.into_s3object()?;
+                    let req = GetObjectRequest {
+                        bucket: s3obj.bucket.to_string(),
+                        key: s3obj.key.to_string(),
+                        ..Default::default()
+                    };
+                    let url = req.get_presigned_url(&region, &credentials, &options);
+                    urls.push(json!({
+                        "file" : {
+                            "url" : url,
+                            "id" : id_from_file(&file),
+                            "partitionValues" : add.partition_values,
+                            "size" : add.size,
+                            "stats" : add.stats.as_ref().unwrap_or(&"".to_string()),
+                        }
+                    }));
+                }
+                Ok(urls)
+            }
+        }
+    }
+
     pub async fn list(share: &str, schema: &str, db: &PgPool) -> Result<Vec<Table>, sqlx::Error> {
         let schema = Schema::find(&share, &schema, db).await?;
 
@@ -101,8 +178,99 @@ impl Table {
             .into_iter()
             .map(|inner| Table {
                 inner,
+                delta_table: None,
                 schema: schema.clone(),
             })
             .collect())
+    }
+
+    pub async fn find(
+        share: &str,
+        schema: &str,
+        table: &str,
+        db: &PgPool,
+    ) -> Result<Table, sqlx::Error> {
+        let schema = Schema::find(&share, &schema, db).await?;
+
+        let inner = sqlx::query_as!(
+            PrimitiveTable,
+            "SELECT * FROM tables WHERE schema_id = $1 AND name = $2",
+            schema.id,
+            table
+        )
+        .fetch_one(db)
+        .await?;
+
+        Ok(Table {
+            inner,
+            schema,
+            delta_table: None,
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+struct PrimitiveTable {
+    id: Uuid,
+    name: String,
+    location: String,
+    schema_id: Uuid,
+    created_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Protocol {
+    min_reader: i32,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Metadata {
+    id: String,
+    format: deltalake::action::Format,
+    schema_string: String,
+    partition_columns: Vec<String>,
+}
+
+impl Metadata {
+    fn from_metadata(metadata: &DeltaTableMetaData) -> Self {
+        Self {
+            id: metadata.id.clone(),
+            format: metadata.format.clone(),
+            schema_string: serde_json::to_string(&metadata.schema).unwrap_or("".to_string()),
+            partition_columns: metadata.partition_columns.clone(),
+        }
+    }
+}
+
+fn id_from_file(file: &str) -> Option<&str> {
+    use regex::Regex;
+
+    let parts: Vec<&str> = file.split('/').collect();
+    if let Some(filename) = parts.last() {
+        // TODO: Move this to a lazy_static!
+        let re =
+            Regex::new(r"part-(\d{5})-([a-z,0-9,\-]{36})-([a-z,0-9]{4}).(\w+).parquet").unwrap();
+        if let Some(captured) = re.captures(filename) {
+            if captured.len() == 5 {
+                return Some(captured.get(2).unwrap().as_str());
+            }
+        }
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_id_from_file() {
+        let file = "s3://delta-riverbank/COVID-19_NYT/part-00006-d0ec7722-b30c-4e1c-92cd-b4fe8d3bb954-c000.snappy.parquet";
+        assert_eq!(
+            Some("d0ec7722-b30c-4e1c-92cd-b4fe8d3bb954"),
+            id_from_file(&file)
+        );
     }
 }
