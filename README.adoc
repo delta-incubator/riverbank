@@ -3,7 +3,7 @@
 = Riverbank
 
 Riverbank is a Delta Sharing Server implemented in Rust. The Delta Sharing
-Protocol is still very early on and so this project make see significant
+Protocol is still very early on and so this project may see significant
 changes.
 
 toc::[]
@@ -23,10 +23,10 @@ toc::[]
 | :heavy_check_mark:
 
 | Loading table metadata
-| :x:
+| :heavy_check_mark:
 
 | Querying tables
-| :x:
+| :heavy_check_mark:
 
 |===
 
@@ -36,7 +36,9 @@ toc::[]
 Riverbank uses link:https://rust-lang.org[Rust], which will be needed to build
 and run a local development version of the service.
 
-The `config.yml` should be configured with the test shares desired. Secrets for accessing resources in AWS S3 can be set in the environment or via a `.env` file in the repository root directory, for example:
+The `config.yml` should be configured with the test shares desired. Secrets for
+accessing resources in AWS S3 can be set in the environment or via a `.env`
+file in the repository root directory, for example:
 
 .The .env file
 [source,bash]
@@ -46,6 +48,13 @@ AWS_ACCESS_KEY_ID=foo
 AWS_SECRET_ACCESS_KEY=bar
 ----
 
-You can then run `cargo run` which will start up the development server at `localhost:8000`.
+In production, download a pre-built release and set up your configuration files
+appropriately.
+
+In development, you can run  `cargo run`, or if you have
+link:https://github.com/passcod/catflap[catflap] and
+link:https://github.com/passcod/cargo-watch[cargo-watch] installed `catflap -p
+8000 -- cargo watch -x run` which will start up the development server at
+`localhost:8000`.
 
 You can use the API documentation at link:http://localhost:8000/apidocs/index.html[localhost:8000/apidocs/index.html].
