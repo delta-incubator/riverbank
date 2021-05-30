@@ -3,13 +3,13 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE shares (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
 CREATE TABLE schemas (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     share_id UUID NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE schemas (
 );
 
 CREATE TABLE tables (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     schema_id UUID NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
@@ -25,13 +25,14 @@ CREATE TABLE tables (
 );
 
 CREATE TABLE tokens (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     token TEXT NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + interval '30 days') NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
+
 CREATE TABLE tokens_for_tables (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     token_id UUID NOT NULL,
     table_id UUID NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
