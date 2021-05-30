@@ -247,15 +247,12 @@ fn id_from_file(file: &str) -> Option<&str> {
     use regex::Regex;
 
     let parts: Vec<&str> = file.split('/').collect();
-    if let Some(filename) = parts.last() {
-        // TODO: Move this to a lazy_static!
-        let re =
-            Regex::new(r"part-(\d{5})-([a-z,0-9,\-]{36})-([a-z,0-9]{4}).(\w+).parquet").unwrap();
-        if let Some(captured) = re.captures(filename) {
-            if captured.len() == 5 {
-                return Some(captured.get(2).unwrap().as_str());
-            }
-        }
+    // TODO: Move this to a lazy_static!
+    let re =
+        Regex::new(r"part-(\d{5})-([a-z,0-9,\-]{36})-([a-z,0-9]{4}).(\w+).parquet").unwrap();
+    let captured = re.captures(parts.last()?)?;
+    if captured.len() == 5 {
+        return Some(captured.get(2).unwrap().as_str());
     }
     None
 }
