@@ -215,7 +215,7 @@ pub mod v1 {
         use regex::Regex;
 
         let parts: Vec<&str> = file.split('/').collect();
-        if let Some(filename) = parts.get(parts.len() - 1) {
+        if let Some(filename) = parts.last() {
             // TODO: Move this to a lazy_static!
             let re = Regex::new(r"part-(\d{5})-([a-z,0-9,\-]{36})-([a-z,0-9]{4}).(\w+).parquet")
                 .unwrap();
