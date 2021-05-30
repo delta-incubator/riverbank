@@ -299,7 +299,8 @@ pub mod v1 {
                 "metaData" : {
                     "id" : self.inner.id,
                     "format" : self.inner.format,
-                    "schemaString" : self.inner.schema,
+                    // TODO:Wrap the serde_json::Error in something useful
+                    "schemaString" : serde_json::to_string(&self.inner.schema).unwrap(),
                     "partitionColumns" : self.inner.partition_columns
                 }
             });
