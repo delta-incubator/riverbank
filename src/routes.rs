@@ -9,7 +9,6 @@
  * The v1 module contains all the v1 API routes
  */
 pub mod v1 {
-    use log::*;
     use serde::Serialize;
     use serde_json::json;
     use tide::{Body, Request};
@@ -150,7 +149,6 @@ pub mod v1 {
     async fn query(req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error> {
         use crate::models::Table;
 
-        let config = &req.state().config;
         let named_share = req.param("share")?;
         let named_schema = req.param("schema")?;
         let named_table = req.param("table")?;

@@ -1,7 +1,5 @@
 use async_std::sync::{Arc, RwLock};
-use dotenv::dotenv;
 use handlebars::Handlebars;
-use log::*;
 use sqlx::PgPool;
 
 use crate::config::Config;

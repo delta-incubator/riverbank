@@ -2,7 +2,6 @@ use chrono::{DateTime, Utc};
 use deltalake::{DeltaTable, DeltaTableError, DeltaTableMetaData};
 use serde::Serialize;
 use sqlx::PgPool;
-use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]
@@ -238,7 +237,7 @@ impl Metadata {
         Self {
             id: metadata.id.clone(),
             format: metadata.format.clone(),
-            schema_string: serde_json::to_string(&metadata.schema).unwrap_or("".to_string()),
+            schema_string: serde_json::to_string(&metadata.schema).unwrap_or_else(|_| "".to_string()),
             partition_columns: metadata.partition_columns.clone(),
         }
     }
