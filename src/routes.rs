@@ -9,14 +9,15 @@
  * The v1 module contains all the v1 API routes
  */
 pub mod v1 {
-    use crate::config::Config;
     use log::*;
     use rusoto_s3::GetObjectRequest;
     use serde::Serialize;
     use serde_json::json;
     use tide::{Body, Request};
 
-    pub fn register(app: &mut tide::Server<Config>) {
+    use crate::state::AppState;
+
+    pub fn register(app: &mut tide::Server<AppState<'static>>) {
         app.at("/api/v1/shares").get(list_shares);
         app.at("/api/v1/shares/:share/schemas").get(list_schemas);
         app.at("/api/v1/shares/:share/schemas/:schema/tables")
@@ -33,8 +34,8 @@ pub mod v1 {
      * GET /api/v1/shares
      * operationId: ListShares
      */
-    async fn list_shares(req: Request<Config>) -> Result<Body, tide::Error> {
-        let config = req.state();
+    async fn list_shares(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
+        let config = &req.state().config;
         let mut shares = PaginatedResponse::default();
 
         for share in &config.shares {
@@ -48,8 +49,8 @@ pub mod v1 {
      * GET /api/v1/shares/{share}/schemas
      * operationId: ListSchemas
      */
-    async fn list_schemas(req: Request<Config>) -> Result<Body, tide::Error> {
-        let config = req.state();
+    async fn list_schemas(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
+        let config = &req.state().config;
         let named_share = req.param("share")?;
         let mut schemas = PaginatedResponse::default();
 
@@ -69,8 +70,8 @@ pub mod v1 {
      * GET /api/v1/shares/{share}/schemas/{schema}/tables
      * operationId: ListTables
      */
-    async fn list_tables(req: Request<Config>) -> Result<Body, tide::Error> {
-        let config = req.state();
+    async fn list_tables(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
+        let config = &req.state().config;
         let named_share = req.param("share")?;
         let named_schema = req.param("schema")?;
         let mut tables = PaginatedResponse::default();
@@ -96,8 +97,8 @@ pub mod v1 {
      * HEAD /shares/{share}/schemas/{schema}/tables/{table}
      * operationId: GetTableVersion
      */
-    async fn latest_version(req: Request<Config>) -> Result<tide::Response, tide::Error> {
-        let config = req.state();
+    async fn latest_version(req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error> {
+        let config = &req.state().config;
         let named_share = req.param("share")?;
         let named_schema = req.param("schema")?;
         let named_table = req.param("table")?;
@@ -121,8 +122,8 @@ pub mod v1 {
      * and unnecessary, so this function just creates a big string from the two (laffo)
      * lines of content that the client is expecting.
      */
-    async fn table_metadata(req: Request<Config>) -> Result<tide::Response, tide::Error> {
-        let config = req.state();
+    async fn table_metadata(req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error> {
+        let config = &req.state().config;
         let named_share = req.param("share")?;
         let named_schema = req.param("schema")?;
         let named_table = req.param("table")?;
@@ -146,13 +147,13 @@ pub mod v1 {
      * POST /shares/{share}/schemas/{schema}/tables/{table}/query
      * operationId: QueryTable
      */
-    async fn query(req: Request<Config>) -> Result<tide::Response, tide::Error> {
+    async fn query(req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error> {
         use rusoto_core::Region;
         use rusoto_credential::ChainProvider;
         use rusoto_credential::ProvideAwsCredentials;
         use rusoto_s3::util::PreSignedRequest;
 
-        let config = req.state();
+        let config = &req.state().config;
         let named_share = req.param("share")?;
         let named_schema = req.param("schema")?;
         let named_table = req.param("table")?;
