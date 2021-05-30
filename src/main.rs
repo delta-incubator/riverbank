@@ -6,6 +6,7 @@ use log::*;
 use sqlx::PgPool;
 
 mod config;
+mod models;
 mod routes;
 mod state;
 

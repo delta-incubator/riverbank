@@ -47,4 +47,3 @@ impl AppState<'_> {
         Ok(tide::Body::from_string(view))
     }
 }
-

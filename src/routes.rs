@@ -35,14 +35,16 @@ pub mod v1 {
      * operationId: ListShares
      */
     async fn list_shares(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
-        let config = &req.state().config;
-        let mut shares = PaginatedResponse::default();
+        use crate::models::Share;
 
-        for share in &config.shares {
-            shares.items.push(json!({"name" : &share.name}));
+        let db = &req.state().db;
+        let mut response = PaginatedResponse::default();
+
+        for share in Share::list(db).await? {
+            response.items.push(json!({"name" : &share.name}));
         }
 
-        Body::from_json(&shares)
+        Body::from_json(&response)
     }
 
     /**
