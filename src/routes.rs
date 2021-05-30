@@ -52,20 +52,20 @@ pub mod v1 {
      * operationId: ListSchemas
      */
     async fn list_schemas(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
-        let config = &req.state().config;
-        let named_share = req.param("share")?;
-        let mut schemas = PaginatedResponse::default();
+        use crate::models::*;
 
-        for share in &config.shares {
-            if named_share == share.name {
-                for schema in &share.schemas {
-                    schemas.items.push(json!({"name" : &schema.name,
-                               "schema" : &share.name}));
-                }
-            }
+        let db = &req.state().db;
+        let named_share = req.param("share")?;
+        let mut response = PaginatedResponse::default();
+
+        for schema in Schema::list(&named_share, &db).await? {
+            response.items.push(json!({
+                "name": &schema.name,
+                "share" : &schema.share_name,
+            }));
         }
 
-        Body::from_json(&schemas)
+        Body::from_json(&response)
     }
 
     /**
@@ -73,23 +73,19 @@ pub mod v1 {
      * operationId: ListTables
      */
     async fn list_tables(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
-        let config = &req.state().config;
+        use crate::models::Table;
+
         let named_share = req.param("share")?;
         let named_schema = req.param("schema")?;
+        let db = &req.state().db;
         let mut tables = PaginatedResponse::default();
 
-        for share in &config.shares {
-            if named_share == share.name {
-                for schema in &share.schemas {
-                    if named_schema == schema.name {
-                        for table in &schema.tables {
-                            tables.items.push(json!({"name" : &table.name,
-                                    "schema" : &schema.name,
-                                    "share" : &share.name}));
-                        }
-                    }
-                }
-            }
+        for table in Table::list(named_share, named_schema, db).await? {
+            tables.items.push(json!({
+                "name" : table.name(),
+                "share" : table.share(),
+                "schema" : table.schema(),
+            }));
         }
 
         Body::from_json(&tables)
