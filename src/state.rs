@@ -2,7 +2,8 @@ use async_std::sync::{Arc, RwLock};
 use handlebars::Handlebars;
 use sqlx::PgPool;
 use std::collections::HashMap;
-use tide_http_auth::{BasicAuthRequest, Storage};
+use tide_http_auth::{BasicAuthRequest, BearerAuthRequest, Storage};
+use uuid::Uuid;
 
 use crate::config::Config;
 
@@ -79,6 +80,31 @@ impl Storage<User, BasicAuthRequest> for AppState<'_> {
                 Ok(Some(user.clone()))
             }
             None => Ok(None),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Tokened {
+    pub id: Uuid,
+    token: String,
+}
+
+#[async_trait::async_trait]
+impl Storage<Tokened, BearerAuthRequest> for AppState<'_> {
+    async fn get_user(&self, request: BearerAuthRequest) -> tide::Result<Option<Tokened>> {
+        // Actually check the token
+        if let Ok(record) = sqlx::query_as!(
+            Tokened,
+            r#"SELECT id, token FROM tokens WHERE token = $1"#,
+            request.token
+        )
+        .fetch_one(&self.db)
+        .await
+        {
+            Ok(Some(record))
+        } else {
+            Ok(None)
         }
     }
 }

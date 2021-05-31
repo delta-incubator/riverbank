@@ -81,16 +81,37 @@ pub mod admin {
 pub mod v1 {
     use serde::Serialize;
     use serde_json::json;
-    use tide::{Body, Request};
+    use tide::{Body, Request, Response};
 
-    use crate::state::AppState;
+    use crate::state::{AppState, Tokened};
+
+    #[derive(Default)]
+    struct RequireTokenMiddleware;
+
+    #[tide::utils::async_trait]
+    impl<AppState: Clone + Send + Sync + 'static> tide::Middleware<AppState>
+        for RequireTokenMiddleware
+    {
+        async fn handle(
+            &self,
+            req: Request<AppState>,
+            next: tide::Next<'_, AppState>,
+        ) -> tide::Result {
+            if let Some(_token) = req.ext::<Tokened>() {
+                Ok(next.run(req).await)
+            } else {
+                Ok(Response::builder(401).body("Not authenticated").build())
+            }
+        }
+    }
 
     pub fn register(app: &mut tide::Server<AppState<'static>>) {
         let mut api = tide::with_state(app.state().clone());
 
         api.with(tide_http_auth::Authentication::new(
-            tide_http_auth::BasicAuthScheme::default(),
+            tide_http_auth::BearerAuthScheme::default(),
         ));
+        api.with(RequireTokenMiddleware {});
 
         api.at("/shares").get(list_shares);
         api.at("/shares/:share/schemas").get(list_schemas);
@@ -103,7 +124,6 @@ pub mod v1 {
         api.at("/shares/:share/schemas/:schema/tables/:table/query")
             .post(query);
         app.at("/api/v1").nest(api);
-
     }
 
     /**
@@ -116,11 +136,15 @@ pub mod v1 {
         let db = &req.state().db;
         let mut response = PaginatedResponse::default();
 
-        for share in Share::list(db).await? {
-            response.items.push(json!({"name" : &share.name}));
-        }
+        if let Some(tokened) = req.ext::<Tokened>() {
+            for share in Share::list_by_token(&tokened.id, db).await? {
+                response.items.push(json!({"name" : &share.name}));
+            }
 
-        Body::from_json(&response)
+            Body::from_json(&response)
+        } else {
+            Ok(Body::from_string("{}".to_string()))
+        }
     }
 
     /**

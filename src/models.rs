@@ -18,6 +18,24 @@ impl Share {
             .fetch_all(db)
             .await
     }
+    /**
+     * This function will return all the Shares that are visible to the given token
+     */
+    pub async fn list_by_token(token_id: &Uuid, db: &PgPool) -> Result<Vec<Share>, sqlx::Error> {
+        sqlx::query_as!(
+            Share,
+            r#"
+            SELECT shares.* FROM shares, schemas
+                WHERE shares.id = schemas.share_id
+                AND schemas.id IN
+                    (SELECT schema_id FROM tables
+                        WHERE id IN (SELECT table_id FROM tokens_for_tables WHERE token_id = $1))
+            "#,
+            token_id
+        )
+        .fetch_all(db)
+        .await
+    }
 }
 
 #[derive(Clone, Debug, Serialize)]
