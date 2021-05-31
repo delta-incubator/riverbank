@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use deltalake::{DeltaTable, DeltaTableError, DeltaTableMetaData};
 use serde::Serialize;
 use sqlx::PgPool;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]
@@ -19,7 +20,7 @@ impl Share {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Schema {
     pub id: Uuid,
     pub name: String,
@@ -30,7 +31,18 @@ pub struct Schema {
 
 impl Schema {
     pub async fn list(share: &str, db: &PgPool) -> Result<Vec<Schema>, sqlx::Error> {
-        sqlx::query_as!(Schema, "SELECT schemas.*, shares.name as share_name FROM schemas, shares WHERE share_id = shares.id AND shares.name = $1", share)
+        sqlx::query_as!(Schema, r#"SELECT schemas.*, shares.name as share_name FROM schemas, shares WHERE share_id = shares.id AND shares.name = $1"#, share)
+            .fetch_all(db)
+            .await
+    }
+
+    pub async fn list_all(db: &PgPool) -> Result<Vec<Schema>, sqlx::Error> {
+        use chrono::prelude::*;
+        // Binding the created_at parameter to psyche out sqlx inference, see:
+        // <https://github.com/launchbadge/sqlx/issues/1265>
+        sqlx::query_as!(Schema,
+            r#"SELECT schemas.*, shares.name as share_name FROM schemas, shares WHERE share_id = shares.id AND schemas.created_at > $1"#,
+                DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(61, 0), Utc))
             .fetch_all(db)
             .await
     }
@@ -55,10 +67,11 @@ impl Schema {
  *
  * Consult the accessors for types of data which can be brought out of the model
  */
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Table {
-    inner: PrimitiveTable,
+    pub inner: PrimitiveTable,
     schema: Schema,
+    #[serde(skip_serializing)]
     delta_table: Option<DeltaTable>,
 }
 
@@ -162,6 +175,37 @@ impl Table {
         }
     }
 
+    /**
+     * List all the tables that exist in the database
+     */
+    pub async fn list_all(db: &PgPool) -> Result<Vec<Table>, sqlx::Error> {
+        let pts = sqlx::query_as!(PrimitiveTable, "SELECT * FROM tables ORDER BY created_at")
+            .fetch_all(db)
+            .await?;
+
+        let mut schema_map = HashMap::new();
+        let mut schemas: Vec<Schema> = Schema::list_all(db).await?;
+        for schema in schemas.drain(0..) {
+            schema_map.insert(schema.id, schema);
+        }
+
+        Ok(pts
+            .into_iter()
+            .map(|inner| {
+                let schema = schema_map.remove(&inner.schema_id).unwrap();
+
+                Table {
+                    inner,
+                    schema,
+                    delta_table: None,
+                }
+            })
+            .collect())
+    }
+
+    /**
+     * List the tables specifically in the given share and schema
+     */
     pub async fn list(share: &str, schema: &str, db: &PgPool) -> Result<Vec<Table>, sqlx::Error> {
         let schema = Schema::find(&share, &schema, db).await?;
 
@@ -208,11 +252,11 @@ impl Table {
     }
 }
 
-#[derive(Clone, Debug)]
-struct PrimitiveTable {
-    id: Uuid,
-    name: String,
-    location: String,
+#[derive(Clone, Debug, Serialize)]
+pub struct PrimitiveTable {
+    pub id: Uuid,
+    pub name: String,
+    pub location: String,
     schema_id: Uuid,
     created_at: DateTime<Utc>,
 }
@@ -241,6 +285,45 @@ impl Metadata {
                 .unwrap_or_else(|_| "".to_string()),
             partition_columns: metadata.partition_columns.clone(),
         }
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct Token {
+    id: Uuid,
+    pub name: String,
+    token: String,
+    pub expires_at: DateTime<Utc>,
+    created_at: DateTime<Utc>,
+}
+
+impl Token {
+    pub async fn list_all(db: &PgPool) -> Result<Vec<Token>, sqlx::Error> {
+        sqlx::query_as!(Token, r#"SELECT * FROM tokens ORDER BY created_at"#)
+            .fetch_all(db)
+            .await
+    }
+
+    pub async fn generate(name: &str, tables: &[Uuid], db: &PgPool) -> Result<Token, sqlx::Error> {
+        let mut tx = db.begin().await?;
+        let secret = Uuid::new_v4();
+        let token = sqlx::query_as!(Token,
+            r#"INSERT INTO tokens (name, token, expires_at) VALUES ($1, $2, (NOW() + interval '30 days')) RETURNING *"#,
+            name, secret.to_hyphenated().to_string())
+            .fetch_one(&mut tx)
+            .await?;
+
+        for table in tables {
+            sqlx::query!(
+                r#"INSERT INTO tokens_for_tables (token_id, table_id) VALUES ($1, $2)"#,
+                &token.id,
+                &table
+            )
+            .execute(&mut tx)
+            .await?;
+        }
+        tx.commit().await?;
+        Ok(token)
     }
 }
 

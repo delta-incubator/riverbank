@@ -9,14 +9,32 @@
         </noscript>
 
         <a href="/">Home</a>
-        <a href="/admin/logout">Logout</a>
 
         <div class="container">
-            <div id="authenticate">
-                <form method="POST" action="/admin">
-                    <input type="text" name="username" placeholder="Admin username"/>
-                    <input type="password" name="password" placeholder="Admin password"/>
-                    <button type="submit">Authenticate</button>
+            <div id="tokens">
+                <h2>Available tokens</h2>
+                <ul>
+                    {{#each tokens}}
+                        <li>
+                            <code>{{this.name}}</code> expires at: {{this.expires_at}}
+                        </li>
+                    {{/each}}
+                </ul>
+            </div>
+            <div id="token_create">
+                <h2>Create tokens</h2>
+                <form method="POST" action="/admin/tokens">
+                    <em>Select all tables you with to allow the token to access</em>
+                    <ul style="list-style-type: none;">
+                        {{#each tables}}
+                            <li>
+                                <input type="checkbox" name="tables[]" value="{{this.inner.id}}">{{this.inner.name}}</input>
+                            </li>
+                        {{/each}}
+                    </ul>
+                    <input type="text" name="name" placeholder="Token name" required="true"/>
+                    <br/>
+                    <button type="submit">Create</button>
                 </form>
             </div>
         </div>
@@ -25,3 +43,4 @@
         </script>
     </body>
 </html>
+<!-- vim: ft=html -->

@@ -1,8 +1,8 @@
 use async_std::sync::{Arc, RwLock};
 use handlebars::Handlebars;
 use sqlx::PgPool;
-use tide_http_auth::{BasicAuthRequest, Storage};
 use std::collections::HashMap;
+use tide_http_auth::{BasicAuthRequest, Storage};
 
 use crate::config::Config;
 
@@ -18,7 +18,12 @@ pub struct AppState<'a> {
 impl AppState<'_> {
     pub fn new(db: PgPool, config: Config) -> Self {
         let mut users = HashMap::new();
-        users.insert("admin".to_string(), User { password: "admin".to_string() });
+        users.insert(
+            "admin".to_string(),
+            User {
+                password: "admin".to_string(),
+            },
+        );
         Self {
             hb: Arc::new(RwLock::new(Handlebars::new())),
             users,
@@ -47,7 +52,7 @@ impl AppState<'_> {
             self.register_templates().await?;
         }
         let hb = self.hb.read().await;
-        let view = hb.render(name, data.unwrap_or_else(|| &serde_json::Value::Null))?;
+        let view = hb.render(name, data.unwrap_or(&serde_json::Value::Null))?;
         let mut body = tide::Body::from_string(view);
         body.set_mime("text/html");
         Ok(body)
