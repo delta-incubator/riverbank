@@ -93,7 +93,6 @@ pub struct Tokened {
 #[async_trait::async_trait]
 impl Storage<Tokened, BearerAuthRequest> for AppState<'_> {
     async fn get_user(&self, request: BearerAuthRequest) -> tide::Result<Option<Tokened>> {
-        // Actually check the token
         if let Ok(record) = sqlx::query_as!(
             Tokened,
             r#"SELECT id, token FROM tokens WHERE token = $1 AND expires_at > NOW()"#,
