@@ -237,7 +237,8 @@ impl Metadata {
         Self {
             id: metadata.id.clone(),
             format: metadata.format.clone(),
-            schema_string: serde_json::to_string(&metadata.schema).unwrap_or_else(|_| "".to_string()),
+            schema_string: serde_json::to_string(&metadata.schema)
+                .unwrap_or_else(|_| "".to_string()),
             partition_columns: metadata.partition_columns.clone(),
         }
     }
@@ -248,8 +249,7 @@ fn id_from_file(file: &str) -> Option<&str> {
 
     let parts: Vec<&str> = file.split('/').collect();
     // TODO: Move this to a lazy_static!
-    let re =
-        Regex::new(r"part-(\d{5})-([a-z,0-9,\-]{36})-([a-z,0-9]{4}).(\w+).parquet").unwrap();
+    let re = Regex::new(r"part-(\d{5})-([a-z,0-9,\-]{36})-([a-z,0-9]{4}).(\w+).parquet").unwrap();
     let captured = re.captures(parts.last()?)?;
     if captured.len() == 5 {
         return Some(captured.get(2).unwrap().as_str());

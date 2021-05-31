@@ -30,7 +30,7 @@ impl AppState<'_> {
     pub async fn render(
         &self,
         name: &str,
-        data: &serde_json::Value,
+        data: Option<&serde_json::Value>,
     ) -> Result<tide::Body, tide::Error> {
         /*
          * In debug mode, reload the templates on ever render to avoid
@@ -41,7 +41,9 @@ impl AppState<'_> {
             self.register_templates().await?;
         }
         let hb = self.hb.read().await;
-        let view = hb.render(name, data)?;
-        Ok(tide::Body::from_string(view))
+        let view = hb.render(name, data.unwrap_or_else(|| &serde_json::Value::Null))?;
+        let mut body = tide::Body::from_string(view);
+        body.set_mime("text/html");
+        Ok(body)
     }
 }

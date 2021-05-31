@@ -8,8 +8,7 @@ use std::io::BufReader;
 use std::path::Path;
 
 #[derive(Clone, Debug, Deserialize)]
-pub struct Config {
-}
+pub struct Config {}
 
 impl Config {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Config, Box<dyn Error>> {
