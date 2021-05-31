@@ -135,16 +135,12 @@ pub mod v1 {
 
         let db = &req.state().db;
         let mut response = PaginatedResponse::default();
-
-        if let Some(tokened) = req.ext::<Tokened>() {
-            for share in Share::list_by_token(&tokened.id, db).await? {
-                response.items.push(json!({"name" : &share.name}));
-            }
-
-            Body::from_json(&response)
-        } else {
-            Ok(Body::from_string("{}".to_string()))
+        let tokened = req.ext::<Tokened>().unwrap();
+        for share in Share::list_by_token(&tokened.id, db).await? {
+            response.items.push(json!({"name" : &share.name}));
         }
+
+        Body::from_json(&response)
     }
 
     /**
@@ -157,8 +153,9 @@ pub mod v1 {
         let db = &req.state().db;
         let named_share = req.param("share")?;
         let mut response = PaginatedResponse::default();
+        let tokened = req.ext::<Tokened>().unwrap();
 
-        for schema in Schema::list(&named_share, &db).await? {
+        for schema in Schema::list_by_token(&named_share, &tokened.id, &db).await? {
             response.items.push(json!({
                 "name": &schema.name,
                 "share" : &schema.share_name,
@@ -179,8 +176,9 @@ pub mod v1 {
         let named_schema = req.param("schema")?;
         let db = &req.state().db;
         let mut tables = PaginatedResponse::default();
+        let tokened = req.ext::<Tokened>().unwrap();
 
-        for table in Table::list(named_share, named_schema, db).await? {
+        for table in Table::list_by_token(named_share, named_schema, &tokened.id, db).await? {
             tables.items.push(json!({
                 "name" : table.name(),
                 "share" : table.share(),
@@ -202,9 +200,11 @@ pub mod v1 {
         let named_share = req.param("share")?;
         let named_schema = req.param("schema")?;
         let named_table = req.param("table")?;
+        let tokened = req.ext::<Tokened>().unwrap();
 
         // TODO: handle 404
-        let mut table = Table::find(named_share, named_schema, named_table, &db).await?;
+        let mut table =
+            Table::find(named_share, named_schema, named_table, &tokened.id, &db).await?;
         table.load_delta().await?;
 
         return Ok(tide::Response::builder(200)
@@ -227,10 +227,12 @@ pub mod v1 {
         let named_share = req.param("share")?;
         let named_schema = req.param("schema")?;
         let named_table = req.param("table")?;
+        let tokened = req.ext::<Tokened>().unwrap();
         // TODO 404
 
         let db = &req.state().db;
-        let mut table = Table::find(named_share, named_schema, named_table, &db).await?;
+        let mut table =
+            Table::find(named_share, named_schema, named_table, &tokened.id, &db).await?;
         table.load_delta().await?;
 
         let metadata = json!({"metaData" : table.metadata()?});
@@ -254,9 +256,11 @@ pub mod v1 {
         let named_share = req.param("share")?;
         let named_schema = req.param("schema")?;
         let named_table = req.param("table")?;
+        let tokened = req.ext::<Tokened>().unwrap();
 
         let db = &req.state().db;
-        let mut table = Table::find(named_share, named_schema, named_table, &db).await?;
+        let mut table =
+            Table::find(named_share, named_schema, named_table, &tokened.id, &db).await?;
         table.load_delta().await?;
 
         let metadata = json!({"metaData" : table.metadata()?});

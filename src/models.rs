@@ -13,11 +13,6 @@ pub struct Share {
 }
 
 impl Share {
-    pub async fn list(db: &PgPool) -> Result<Vec<Share>, sqlx::Error> {
-        sqlx::query_as!(Share, "SELECT * FROM shares")
-            .fetch_all(db)
-            .await
-    }
     /**
      * This function will return all the Shares that are visible to the given token
      */
@@ -28,8 +23,9 @@ impl Share {
             SELECT shares.* FROM shares, schemas
                 WHERE shares.id = schemas.share_id
                 AND schemas.id IN
-                    (SELECT schema_id FROM tables
-                        WHERE id IN (SELECT table_id FROM tokens_for_tables WHERE token_id = $1))
+                    (SELECT schema_id FROM tables, tokens_for_tables
+                        WHERE tables.id = tokens_for_tables.table_id
+                        AND tokens_for_tables.token_id = $1)
             "#,
             token_id
         )
@@ -48,10 +44,27 @@ pub struct Schema {
 }
 
 impl Schema {
-    pub async fn list(share: &str, db: &PgPool) -> Result<Vec<Schema>, sqlx::Error> {
-        sqlx::query_as!(Schema, r#"SELECT schemas.*, shares.name as share_name FROM schemas, shares WHERE share_id = shares.id AND shares.name = $1"#, share)
-            .fetch_all(db)
-            .await
+    pub async fn list_by_token(
+        share: &str,
+        token_id: &Uuid,
+        db: &PgPool,
+    ) -> Result<Vec<Schema>, sqlx::Error> {
+        sqlx::query_as!(
+            Schema,
+            r#"
+            SELECT schemas.*, shares.name as share_name FROM schemas, shares
+                WHERE share_id = shares.id AND shares.name = $1
+                AND schemas.id IN
+                    (SELECT schema_id FROM tables, tokens_for_tables
+                        WHERE tables.id = tokens_for_tables.table_id
+                        AND tokens_for_tables.token_id = $2)
+
+                "#,
+            share,
+            token_id
+        )
+        .fetch_all(db)
+        .await
     }
 
     pub async fn list_all(db: &PgPool) -> Result<Vec<Schema>, sqlx::Error> {
@@ -224,13 +237,23 @@ impl Table {
     /**
      * List the tables specifically in the given share and schema
      */
-    pub async fn list(share: &str, schema: &str, db: &PgPool) -> Result<Vec<Table>, sqlx::Error> {
+    pub async fn list_by_token(
+        share: &str,
+        schema: &str,
+        token_id: &Uuid,
+        db: &PgPool,
+    ) -> Result<Vec<Table>, sqlx::Error> {
         let schema = Schema::find(&share, &schema, db).await?;
 
         let tables = sqlx::query_as!(
             PrimitiveTable,
-            "SELECT * FROM tables WHERE schema_id = $1",
-            schema.id
+            r#"
+                SELECT tables.* FROM tables, tokens_for_tables
+                WHERE schema_id = $1
+                AND tables.id = tokens_for_tables.table_id
+                AND tokens_for_tables.token_id = $2"#,
+            schema.id,
+            token_id
         )
         .fetch_all(db)
         .await?;
@@ -249,15 +272,23 @@ impl Table {
         share: &str,
         schema: &str,
         table: &str,
+        token_id: &Uuid,
         db: &PgPool,
     ) -> Result<Table, sqlx::Error> {
         let schema = Schema::find(&share, &schema, db).await?;
 
         let inner = sqlx::query_as!(
             PrimitiveTable,
-            "SELECT * FROM tables WHERE schema_id = $1 AND name = $2",
+            r#"
+                SELECT tables.* FROM tables, tokens_for_tables
+                WHERE schema_id = $1
+                    AND name = $2
+                    AND tables.id = tokens_for_tables.table_id
+                    AND tokens_for_tables.token_id = $3
+                "#,
             schema.id,
-            table
+            table,
+            token_id
         )
         .fetch_one(db)
         .await?;
