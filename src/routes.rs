@@ -6,7 +6,7 @@
  */
 
 pub mod admin {
-    use crate::models::{Table, Token};
+    use crate::models::*;
     use crate::state::{AppState, User};
     use log::*;
     use serde::Deserialize;
@@ -50,10 +50,13 @@ pub mod admin {
     async fn index(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
         let tables = Table::list_all(&req.state().db).await?;
         let tokens = Token::list_all(&req.state().db).await?;
+        let schemas = Schema::list_all(&req.state().db).await?;
+        let shares = Share::list_all(&req.state().db).await?;
+
         req.state()
             .render(
                 "admin",
-                Some(&json!({ "tables" : tables, "tokens" : tokens })),
+                Some(&json!({ "tables" : tables, "tokens" : tokens, "schemas" : schemas, "shares" : shares })),
             )
             .await
     }

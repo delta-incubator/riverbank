@@ -96,7 +96,7 @@ impl Storage<Tokened, BearerAuthRequest> for AppState<'_> {
         // Actually check the token
         if let Ok(record) = sqlx::query_as!(
             Tokened,
-            r#"SELECT id, token FROM tokens WHERE token = $1"#,
+            r#"SELECT id, token FROM tokens WHERE token = $1 AND expires_at > NOW()"#,
             request.token
         )
         .fetch_one(&self.db)

@@ -11,20 +11,10 @@
         <a href="/">Home</a>
 
         <div class="container">
-            <div id="tokens">
-                <h2>Available tokens</h2>
-                <ul>
-                    {{#each tokens}}
-                        <li>
-                            <code>{{this.name}}</code> expires at: {{this.expires_at}}
-                        </li>
-                    {{/each}}
-                </ul>
-            </div>
             <div id="token_create">
                 <h2>Create tokens</h2>
                 <form method="POST" action="/admin/tokens">
-                    <em>Select all tables you with to allow the token to access</em>
+                    <em>Select all tables you wish to allow the token to access</em>
                     <ul style="list-style-type: none;">
                         {{#each tables}}
                             <li>
@@ -37,7 +27,88 @@
                     <button type="submit">Create</button>
                 </form>
             </div>
+            <div id="tokens">
+                <details>
+                    <summary>Available tokens
+                    </summarY>
+                    <ul>
+                        {{#each tokens}}
+                            <li>
+                                <code>{{this.name}}</code> expires at: {{this.expires_at}}
+                            </li>
+                        {{/each}}
+                    </ul>
+                </details>
+            </div>
         </div>
+
+        <hr/>
+
+        <div class="container">
+            <div id="table_create">
+                <h2>Create table</h2>
+                <form method="POST" action"/admin/tables">
+                    <label>Share
+                        <select name="schemas">
+                            {{#each schemas}}
+                            <option value="{{this.id}}">{{this.share_name}} / {{this.name}}</option>
+                            {{/each}}
+                        </select>
+                    </label>
+                    <input type="text" name="name" placeholder="Table name"/>
+                    <input type="text" name="location" placeholder="s3://location"/>
+                    <button type+"submit">Create</button>
+                </form>
+
+                <details>
+                    <summary>Available tables</summary>
+                    <ul>
+                        {{#each tables}}
+                        <li>
+                            {{this.inner.name}} (<code>{{this.inner.location}}</code>)
+                        </li>
+                        {{/each}}
+                    </ul>
+                </details>
+            </div>
+            <div id="schema_create">
+                <h2>Create schema</h2>
+                <form method="POST" action"/admin/schemas">
+                    <label>Share
+                        <select name="share">
+                            {{#each shares}}
+                            <option value="{{this.id}}">{{this.name}}</option>
+                            {{/each}}
+                        </select>
+                    </label>
+                    <input type="text" name="name" placeholder="Schema name"/>
+                    <button type+"submit">Create</button>
+                </form>
+            </div>
+            <div id="share_create">
+                <h2>Create share</h2>
+                <form method="POST" action"/admin/shares">
+                    <input type="text" name="name" placeholder="Share name"/>
+                    <button type+"submit">Create</button>
+                </form>
+            </div>
+        </div>
+
+        <hr/>
+
+        <div class="container">
+            <div id="credential_create">
+                <h2>Create S3 credential</h2>
+                <form method="POST" action"/admin/credentials">
+                    <input type="text" name="name" placeholder="Credential name"/>
+                    <input type="text" name="region" placeholder="Region string"/>
+                    <input type="password" name="access_key_id" placeholder="AWS_ACCESS_KEY_ID"/>
+                    <input type="password" name="secret_access_key" placeholder="AWS_SECRET_ACCESS_KEY"/>
+                    <button type+"submit">Create</button>
+                </form>
+            </div>
+        </div>
+
 
         <script type="text/javascript">
         </script>

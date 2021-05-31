@@ -5,7 +5,7 @@ use sqlx::PgPool;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Share {
     pub id: Uuid,
     pub name: String,
@@ -13,6 +13,11 @@ pub struct Share {
 }
 
 impl Share {
+    pub async fn list_all(db: &PgPool) -> Result<Vec<Share>, sqlx::Error> {
+        sqlx::query_as!(Share, r#"SELECT * FROM shares ORDER BY created_at ASC"#)
+            .fetch_all(db)
+            .await
+    }
     /**
      * This function will return all the Shares that are visible to the given token
      */
@@ -58,7 +63,7 @@ impl Schema {
                     (SELECT schema_id FROM tables, tokens_for_tables
                         WHERE tables.id = tokens_for_tables.table_id
                         AND tokens_for_tables.token_id = $2)
-
+                ORDER BY share_id ASC
                 "#,
             share,
             token_id
@@ -348,9 +353,13 @@ pub struct Token {
 
 impl Token {
     pub async fn list_all(db: &PgPool) -> Result<Vec<Token>, sqlx::Error> {
-        sqlx::query_as!(Token, r#"SELECT * FROM tokens ORDER BY created_at"#)
-            .fetch_all(db)
-            .await
+        sqlx::query_as!(
+            Token,
+            r#"SELECT * FROM tokens
+                WHERE expires_at > NOW() ORDER BY created_at"#
+        )
+        .fetch_all(db)
+        .await
     }
 
     pub async fn generate(name: &str, tables: &[Uuid], db: &PgPool) -> Result<Token, sqlx::Error> {
