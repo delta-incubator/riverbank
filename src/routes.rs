@@ -86,16 +86,24 @@ pub mod v1 {
     use crate::state::AppState;
 
     pub fn register(app: &mut tide::Server<AppState<'static>>) {
-        app.at("/api/v1/shares").get(list_shares);
-        app.at("/api/v1/shares/:share/schemas").get(list_schemas);
-        app.at("/api/v1/shares/:share/schemas/:schema/tables")
+        let mut api = tide::with_state(app.state().clone());
+
+        api.with(tide_http_auth::Authentication::new(
+            tide_http_auth::BasicAuthScheme::default(),
+        ));
+
+        api.at("/shares").get(list_shares);
+        api.at("/shares/:share/schemas").get(list_schemas);
+        api.at("/shares/:share/schemas/:schema/tables")
             .get(list_tables);
-        app.at("/api/v1/shares/:share/schemas/:schema/tables/:table")
+        api.at("/shares/:share/schemas/:schema/tables/:table")
             .get(latest_version);
-        app.at("/api/v1/shares/:share/schemas/:schema/tables/:table/metadata")
+        api.at("/shares/:share/schemas/:schema/tables/:table/metadata")
             .get(table_metadata);
-        app.at("/api/v1/shares/:share/schemas/:schema/tables/:table/query")
+        api.at("/shares/:share/schemas/:schema/tables/:table/query")
             .post(query);
+        app.at("/api/v1").nest(api);
+
     }
 
     /**
