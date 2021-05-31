@@ -90,6 +90,48 @@
       ]
     }
   },
+  "4da7a50e6f5f1936392667b27aa36270cc6b5a49489cac8f002c19e10b9137b6": {
+    "query": "SELECT * FROM tables ORDER BY created_at",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Uuid"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "schema_id",
+          "type_info": "Uuid"
+        },
+        {
+          "ordinal": 3,
+          "name": "created_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "location",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "7a2c8fcedaf05b813172ce4d90fd0249d54b0085fadde635a1087efdcbf29cf3": {
     "query": "SELECT schemas.*, shares.name as share_name FROM schemas, shares WHERE share_id = shares.id AND shares.name = $1",
     "describe": {
@@ -132,6 +174,19 @@
         false,
         false
       ]
+    }
+  },
+  "96b309274790960ac9b8bd8a8a5380d439a303b03eed2b6f4b8f8c1b3ef9bb20": {
+    "query": "INSERT INTO tokens_for_tables (token_id, table_id) VALUES ($1, $2)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid"
+        ]
+      },
+      "nullable": []
     }
   },
   "96e0522831c2c68b475508bf716b8b6a7e84dd29149b723d22342cdb2418131f": {
@@ -178,6 +233,51 @@
       ]
     }
   },
+  "a099aaeecb1b0d32c9f53d9804368fbbcbc7960b8a8c363a695db8e6cd2dfdbc": {
+    "query": "INSERT INTO tokens (name, token, expires_at) VALUES ($1, $2, (NOW() + interval '30 days')) RETURNING *",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Uuid"
+        },
+        {
+          "ordinal": 1,
+          "name": "token",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "expires_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 3,
+          "name": "created_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "name",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "e271da0f2686d15ae7743f637b20eb1975f1284278a0a176613dcac17ae81de4": {
     "query": "SELECT * FROM shares",
     "describe": {
@@ -202,6 +302,92 @@
         "Left": []
       },
       "nullable": [
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "f0624b15f6031ea07a09fa752dc456a9e1e76639993aaee4c1b9d3a8eaa5d093": {
+    "query": "SELECT * FROM tokens ORDER BY created_at",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Uuid"
+        },
+        {
+          "ordinal": 1,
+          "name": "token",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "expires_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 3,
+          "name": "created_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "name",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "f57b4f9b069e0d60626b37fd36b59498626ae3ac2eb63df42651a212837c314b": {
+    "query": "SELECT schemas.*, shares.name as share_name FROM schemas, shares WHERE share_id = shares.id AND schemas.created_at > $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Uuid"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "share_id",
+          "type_info": "Uuid"
+        },
+        {
+          "ordinal": 3,
+          "name": "created_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "share_name",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Timestamptz"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
         false,
         false,
         false
