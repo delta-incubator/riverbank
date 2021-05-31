@@ -25,6 +25,7 @@ async fn main() -> Result<(), tide::Error> {
     let mut app = tide::with_state(state);
 
     routes::v1::register(&mut app);
+    routes::admin::register(&mut app);
 
     app.at("/")
         .get(|req: tide::Request<AppState<'static>>| async move {

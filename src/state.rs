@@ -1,6 +1,8 @@
 use async_std::sync::{Arc, RwLock};
 use handlebars::Handlebars;
 use sqlx::PgPool;
+use tide_http_auth::{BasicAuthRequest, Storage};
+use std::collections::HashMap;
 
 use crate::config::Config;
 
@@ -8,14 +10,18 @@ use crate::config::Config;
 pub struct AppState<'a> {
     pub db: PgPool,
     pub config: Config,
+    users: HashMap<String, User>,
 
     hb: Arc<RwLock<Handlebars<'a>>>,
 }
 
 impl AppState<'_> {
     pub fn new(db: PgPool, config: Config) -> Self {
+        let mut users = HashMap::new();
+        users.insert("admin".to_string(), User { password: "admin".to_string() });
         Self {
             hb: Arc::new(RwLock::new(Handlebars::new())),
+            users,
             db,
             config,
         }
@@ -45,5 +51,29 @@ impl AppState<'_> {
         let mut body = tide::Body::from_string(view);
         body.set_mime("text/html");
         Ok(body)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct User {
+    password: String,
+}
+
+#[async_trait::async_trait]
+impl Storage<User, BasicAuthRequest> for AppState<'_> {
+    async fn get_user(&self, request: BasicAuthRequest) -> tide::Result<Option<User>> {
+        match self.users.get(&request.username) {
+            Some(user) => {
+                // Again, this is just an example. In practice you'd want to use something called a
+                // "constant time comparison function" to check if the passwords are equivalent to
+                // avoid a timing attack.
+                if user.password != request.password {
+                    return Ok(None);
+                }
+
+                Ok(Some(user.clone()))
+            }
+            None => Ok(None),
+        }
     }
 }

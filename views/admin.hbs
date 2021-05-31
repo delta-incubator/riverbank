@@ -2,18 +2,20 @@
     <head>
     </head>
     <body>
-        <h1>Riverbank</h1>
+        <h1>Riverbank Administration</h1>
 
         <noscript>
             <strong>Unfortunately Riverbank won't really show you much without JavaScript enabled.</strong>
         </noscript>
 
-        <a href="/admin">Administration</a>
+        <a href="/">Home</a>
+        <a href="/admin/logout">Logout</a>
 
         <div class="container">
             <div id="authenticate">
-                <form method="POST" action="/">
-                    <input type="password" name="token" placeholder="Authentication token"/>
+                <form method="POST" action="/admin">
+                    <input type="text" name="username" placeholder="Admin username"/>
+                    <input type="password" name="password" placeholder="Admin password"/>
                     <button type="submit">Authenticate</button>
                 </form>
             </div>

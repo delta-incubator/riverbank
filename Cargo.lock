@@ -2366,6 +2366,7 @@ name = "riverbank"
 version = "0.1.0"
 dependencies = [
  "async-std",
+ "async-trait",
  "chrono",
  "deltalake",
  "dotenv",
@@ -2382,6 +2383,7 @@ dependencies = [
  "serde_yaml",
  "sqlx",
  "tide",
+ "tide-http-auth",
  "uuid",
 ]
 
@@ -3114,6 +3116,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tide-http-auth"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e44a660f645fe1f8e84e237e269dc55b978f742620c8ea210b1c3f932cea209"
+dependencies = [
+ "async-trait",
+ "base64 0.13.0",
+ "http-types",
+ "tide",
+ "tracing",
+]
+
+[[package]]
 name = "time"
 version = "0.1.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3241,7 +3256,19 @@ checksum = "09adeb8c97449311ccd28a427f96fb563e7fd31aabf994189879d9da2394b89d"
 dependencies = [
  "cfg-if 1.0.0",
  "pin-project-lite 0.2.6",
+ "tracing-attributes",
  "tracing-core",
+]
+
+[[package]]
+name = "tracing-attributes"
+version = "0.1.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c42e6fa53307c8a17e4ccd4dc81cf5ec38db9209f59b222210375b54ee40d1e2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

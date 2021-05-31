@@ -5,6 +5,55 @@
  * it off to business logic
  */
 
+pub mod admin {
+    use tide::{Body, Request};
+    use crate::state::{AppState, User};
+
+    struct AdminAuthentication;
+
+    #[tide::utils::async_trait]
+    impl<AppState: Clone + Send + Sync + 'static> tide::Middleware<AppState> for AdminAuthentication {
+        async fn handle(&self, req: Request<AppState>, next: tide::Next<'_, AppState>) -> tide::Result {
+            if let Some(_user) = req.ext::<User>() {
+                Ok(next.run(req).await)
+            } else {
+                let mut response: tide::Response = "howdy stranger".to_string().into();
+                response.set_status(tide::http::StatusCode::Unauthorized);
+                response.insert_header("WWW-Authenticate", "Basic");
+                Ok(response)
+            }
+        }
+    }
+
+    pub fn register(app: &mut tide::Server<AppState<'static>>) {
+        app.at("/admin")
+            .get(|req: tide::Request<AppState<'static>>| async move {
+                req.state().render("admin", None).await
+            });
+        app.at("/admin")
+            .post(authenticate_admin);
+
+        app.at("/admin/logout").get(logout);
+        app.at("/admin").with(tide_http_auth::Authentication::new(
+            tide_http_auth::BasicAuthScheme::default(),
+        ));
+
+        app.at("/admin").with(AdminAuthentication);
+    }
+
+    async fn logout(_req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error> {
+        //TODO actually make this log the user out, not sure how yet
+        let mut response: tide::Response = "Go Home".to_string().into();
+        response.set_status(tide::http::StatusCode::Unauthorized);
+        response.insert_header("WWW-Authenticate", "Basic");
+        Ok(response)
+    }
+
+    async fn authenticate_admin(_req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
+        Ok(tide::Body::from_string("".to_string()))
+    }
+}
+
 /**
  * The v1 module contains all the v1 API routes
  */
