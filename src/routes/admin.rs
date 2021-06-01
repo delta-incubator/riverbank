@@ -11,11 +11,7 @@ struct AdminAuthentication;
 
 #[tide::utils::async_trait]
 impl<AppState: Clone + Send + Sync + 'static> tide::Middleware<AppState> for AdminAuthentication {
-    async fn handle(
-        &self,
-        req: Request<AppState>,
-        next: tide::Next<'_, AppState>,
-    ) -> tide::Result {
+    async fn handle(&self, req: Request<AppState>, next: tide::Next<'_, AppState>) -> tide::Result {
         if let Some(_user) = req.ext::<User>() {
             Ok(next.run(req).await)
         } else {
@@ -36,6 +32,7 @@ pub fn register(app: &mut tide::Server<AppState<'static>>) {
     admin.with(AdminAuthentication {});
     admin.at("/").get(index);
     admin.at("/tokens").post(create_token);
+    admin.at("/tables").post(create_table);
     app.at("/admin").nest(admin);
 }
 
@@ -66,5 +63,26 @@ async fn create_token(mut req: Request<AppState<'_>>) -> Result<tide::Response, 
         let token = Token::generate(&create.name, &create.tables, &req.state().db).await?;
         debug!("created: {:?}", token);
     }
+    Ok(tide::Redirect::new("/admin").into())
+}
+
+async fn create_table(mut req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error> {
+    #[derive(Deserialize, Debug)]
+    struct CreateTable {
+        name: String,
+        location: String,
+        schema: Uuid,
+    }
+
+    let create: CreateTable = req.body_form().await?;
+    debug!("create: {:?}", create);
+    Table::create(
+        &create.name,
+        &create.location,
+        &create.schema,
+        &req.state().db,
+    )
+    .await?;
+
     Ok(tide::Redirect::new("/admin").into())
 }

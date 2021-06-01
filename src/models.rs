@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use deltalake::{DeltaTable, DeltaTableError, DeltaTableMetaData};
+use log::*;
 use serde::Serialize;
 use sqlx::PgPool;
 use std::collections::HashMap;
@@ -92,6 +93,18 @@ impl Schema {
                 AND shares.name = $2"#,
             schema,
             share
+        )
+        .fetch_one(db)
+        .await
+    }
+
+    pub async fn by_id(id: &Uuid, db: &PgPool) -> Result<Schema, sqlx::Error> {
+        sqlx::query_as!(
+            Schema,
+            r#"SELECT schemas.*, shares.name AS share_name FROM schemas, shares
+            WHERE schemas.id = $1
+            AND share_id = shares.id"#,
+            id
         )
         .fetch_one(db)
         .await
@@ -225,10 +238,12 @@ impl Table {
             schema_map.insert(schema.id, schema);
         }
 
+        debug!("schema_map: {:?}", schema_map);
+
         Ok(pts
             .into_iter()
             .map(|inner| {
-                let schema = schema_map.remove(&inner.schema_id).unwrap();
+                let schema = schema_map.get(&inner.schema_id).unwrap().clone();
 
                 Table {
                     inner,
@@ -298,6 +313,30 @@ impl Table {
         .fetch_one(db)
         .await?;
 
+        Ok(Table {
+            inner,
+            schema,
+            delta_table: None,
+        })
+    }
+
+    pub async fn create(
+        name: &str,
+        location: &str,
+        schema_id: &Uuid,
+        db: &PgPool,
+    ) -> Result<Table, sqlx::Error> {
+        let schema = Schema::by_id(schema_id, db).await?;
+        let inner = sqlx::query_as!(
+            PrimitiveTable,
+            r#"INSERT INTO tables (name, location, schema_id)
+                VALUES ($1, $2, $3) RETURNING *"#,
+            name,
+            location,
+            schema_id
+        )
+        .fetch_one(db)
+        .await?;
         Ok(Table {
             inner,
             schema,

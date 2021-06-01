@@ -11,11 +11,7 @@ struct RequireTokenMiddleware;
 impl<AppState: Clone + Send + Sync + 'static> tide::Middleware<AppState>
     for RequireTokenMiddleware
 {
-    async fn handle(
-        &self,
-        req: Request<AppState>,
-        next: tide::Next<'_, AppState>,
-    ) -> tide::Result {
+    async fn handle(&self, req: Request<AppState>, next: tide::Next<'_, AppState>) -> tide::Result {
         if let Some(_token) = req.ext::<Tokened>() {
             Ok(next.run(req).await)
         } else {
@@ -46,9 +42,9 @@ pub fn register(app: &mut tide::Server<AppState<'static>>) {
 }
 
 /**
-    * GET /api/v1/shares
-    * operationId: ListShares
-    */
+ * GET /api/v1/shares
+ * operationId: ListShares
+ */
 async fn list_shares(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
     use crate::models::Share;
 
@@ -63,9 +59,9 @@ async fn list_shares(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
 }
 
 /**
-    * GET /api/v1/shares/{share}/schemas
-    * operationId: ListSchemas
-    */
+ * GET /api/v1/shares/{share}/schemas
+ * operationId: ListSchemas
+ */
 async fn list_schemas(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
     use crate::models::*;
 
@@ -85,9 +81,9 @@ async fn list_schemas(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
 }
 
 /**
-    * GET /api/v1/shares/{share}/schemas/{schema}/tables
-    * operationId: ListTables
-    */
+ * GET /api/v1/shares/{share}/schemas/{schema}/tables
+ * operationId: ListTables
+ */
 async fn list_tables(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
     use crate::models::Table;
 
@@ -109,9 +105,9 @@ async fn list_tables(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
 }
 
 /**
-    * HEAD /shares/{share}/schemas/{schema}/tables/{table}
-    * operationId: GetTableVersion
-    */
+ * HEAD /shares/{share}/schemas/{schema}/tables/{table}
+ * operationId: GetTableVersion
+ */
 async fn latest_version(req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error> {
     use crate::models::Table;
 
@@ -122,8 +118,7 @@ async fn latest_version(req: Request<AppState<'_>>) -> Result<tide::Response, ti
     let tokened = req.ext::<Tokened>().unwrap();
 
     // TODO: handle 404
-    let mut table =
-        Table::find(named_share, named_schema, named_table, &tokened.id, &db).await?;
+    let mut table = Table::find(named_share, named_schema, named_table, &tokened.id, &db).await?;
     table.load_delta().await?;
 
     return Ok(tide::Response::builder(200)
@@ -133,13 +128,13 @@ async fn latest_version(req: Request<AppState<'_>>) -> Result<tide::Response, ti
 }
 
 /**
-    * GET /shares/{share}/schemas/{schema}/tables/{table}/metadata
-    * operationId: GetTableMetadata
-    *
-    * The response from this API is "streaming JSON" which is kind of annoying
-    * and unnecessary, so this function just creates a big string from the two (laffo)
-    * lines of content that the client is expecting.
-    */
+ * GET /shares/{share}/schemas/{schema}/tables/{table}/metadata
+ * operationId: GetTableMetadata
+ *
+ * The response from this API is "streaming JSON" which is kind of annoying
+ * and unnecessary, so this function just creates a big string from the two (laffo)
+ * lines of content that the client is expecting.
+ */
 async fn table_metadata(req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error> {
     use crate::models::Table;
 
@@ -150,8 +145,7 @@ async fn table_metadata(req: Request<AppState<'_>>) -> Result<tide::Response, ti
     // TODO 404
 
     let db = &req.state().db;
-    let mut table =
-        Table::find(named_share, named_schema, named_table, &tokened.id, &db).await?;
+    let mut table = Table::find(named_share, named_schema, named_table, &tokened.id, &db).await?;
     table.load_delta().await?;
 
     let metadata = json!({"metaData" : table.metadata()?});
@@ -166,9 +160,9 @@ async fn table_metadata(req: Request<AppState<'_>>) -> Result<tide::Response, ti
 }
 
 /**
-    * POST /shares/{share}/schemas/{schema}/tables/{table}/query
-    * operationId: QueryTable
-    */
+ * POST /shares/{share}/schemas/{schema}/tables/{table}/query
+ * operationId: QueryTable
+ */
 async fn query(req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error> {
     use crate::models::Table;
 
@@ -178,8 +172,7 @@ async fn query(req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error
     let tokened = req.ext::<Tokened>().unwrap();
 
     let db = &req.state().db;
-    let mut table =
-        Table::find(named_share, named_schema, named_table, &tokened.id, &db).await?;
+    let mut table = Table::find(named_share, named_schema, named_table, &tokened.id, &db).await?;
     table.load_delta().await?;
 
     let metadata = json!({"metaData" : table.metadata()?});

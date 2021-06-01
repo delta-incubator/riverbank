@@ -18,7 +18,9 @@
                     <ul style="list-style-type: none;">
                         {{#each tables}}
                             <li>
+                                <label>
                                 <input type="checkbox" name="tables[]" value="{{this.inner.id}}">{{this.inner.name}}</input>
+                                </label>
                             </li>
                         {{/each}}
                     </ul>
@@ -47,9 +49,9 @@
         <div class="container">
             <div id="table_create">
                 <h2>Create table</h2>
-                <form method="POST" action"/admin/tables">
+                <form method="POST" action="/admin/tables">
                     <label>Share
-                        <select name="schemas">
+                        <select name="schema">
                             {{#each schemas}}
                             <option value="{{this.id}}">{{this.share_name}} / {{this.name}}</option>
                             {{/each}}
