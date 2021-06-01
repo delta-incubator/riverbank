@@ -38,6 +38,12 @@ impl Share {
         .fetch_all(db)
         .await
     }
+
+    pub async fn by_id(id: &Uuid, db: &PgPool) -> Result<Share, sqlx::Error> {
+        sqlx::query_as!(Share, r#"SELECT * FROM shares WHERE id = $1"#, id)
+            .fetch_one(db)
+            .await
+    }
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -108,6 +114,20 @@ impl Schema {
         )
         .fetch_one(db)
         .await
+    }
+
+    pub async fn create(name: &str, share_id: &Uuid, db: &PgPool) -> Result<Schema, sqlx::Error> {
+        let share = Share::by_id(share_id, db).await?;
+
+        let record = sqlx::query!(
+            r#"INSERT INTO schemas (name, share_id)
+                VALUES ($1, $2) RETURNING id"#,
+            name,
+            share_id
+        )
+        .fetch_one(db)
+        .await?;
+        Schema::by_id(&record.id, db).await
     }
 }
 

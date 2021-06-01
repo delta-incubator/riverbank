@@ -33,6 +33,7 @@ pub fn register(app: &mut tide::Server<AppState<'static>>) {
     admin.at("/").get(index);
     admin.at("/tokens").post(create_token);
     admin.at("/tables").post(create_table);
+    admin.at("/schemas").post(create_schema);
     app.at("/admin").nest(admin);
 }
 
@@ -75,7 +76,6 @@ async fn create_table(mut req: Request<AppState<'_>>) -> Result<tide::Response, 
     }
 
     let create: CreateTable = req.body_form().await?;
-    debug!("create: {:?}", create);
     Table::create(
         &create.name,
         &create.location,
@@ -83,6 +83,19 @@ async fn create_table(mut req: Request<AppState<'_>>) -> Result<tide::Response, 
         &req.state().db,
     )
     .await?;
+
+    Ok(tide::Redirect::new("/admin").into())
+}
+
+async fn create_schema(mut req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error> {
+    #[derive(Deserialize, Debug)]
+    struct CreateSchema {
+        name: String,
+        share: Uuid,
+    }
+
+    let create: CreateSchema = req.body_form().await?;
+    Schema::create(&create.name, &create.share, &req.state().db).await?;
 
     Ok(tide::Redirect::new("/admin").into())
 }
