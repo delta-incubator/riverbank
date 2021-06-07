@@ -117,7 +117,8 @@ impl Schema {
     }
 
     pub async fn create(name: &str, share_id: &Uuid, db: &PgPool) -> Result<Schema, sqlx::Error> {
-        let share = Share::by_id(share_id, db).await?;
+        // Just querying for the share to validate the presence of the record
+        let _share = Share::by_id(share_id, db).await?;
 
         let record = sqlx::query!(
             r#"INSERT INTO schemas (name, share_id)
