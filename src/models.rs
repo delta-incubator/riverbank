@@ -221,7 +221,7 @@ impl Table {
                     .expect("Failed to get credentials");
 
                 for add in delta.get_actions() {
-                    let file = format!("{}/{}", delta.table_path, &add.path);
+                    let file = format!("{}/{}", delta.table_uri, &add.path);
                     let s3obj = deltalake::storage::parse_uri(&file)?.into_s3object()?;
                     let req = GetObjectRequest {
                         bucket: s3obj.bucket.to_string(),
