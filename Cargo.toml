@@ -6,9 +6,11 @@ edition = "2018"
 
 [dependencies]
 async-std = { version = "1", features = ["attributes", "tokio1"] }
+async-trait = "0.1"
 chrono = "0.4"
 deltalake = { git = "https://github.com/delta-io/delta-rs", branch = "main", features = ["s3"] }
 dotenv = "~0.15"
+handlebars = { version = "4", features = ["dir_source"] }
 log = "0.4"
 pretty_env_logger = "0.3"
 regex = "1"
@@ -19,6 +21,7 @@ serde = { version = "1", features = ["derive"] }
 serde_qs = "0.7"
 serde_json = "1"
 serde_yaml = "0.8"
-sqlx = { version = "~0.5.2", features = ["chrono", "json", "offline", "postgres", "tls", "uuid", "runtime-async-std-rustls"] }
+sqlx = { version = "0.5", features = ["chrono", "json", "offline", "postgres",  "uuid", "runtime-async-std-rustls"] }
 tide = "0.16"
+tide-http-auth = "0.4"
 uuid = { version = "0.8", features = ["v4", "serde"]}

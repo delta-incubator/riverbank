@@ -3,9 +3,14 @@
  */
 
 use log::*;
+use sqlx::PgPool;
 
 mod config;
+mod models;
 mod routes;
+mod state;
+
+use crate::state::AppState;
 
 #[async_std::main]
 async fn main() -> Result<(), tide::Error> {
@@ -13,12 +18,19 @@ async fn main() -> Result<(), tide::Error> {
     pretty_env_logger::init();
 
     let conf = config::Config::from_file("config.yml").expect("Failed to load configuration");
-    let mut app = tide::with_state(conf);
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let db = PgPool::connect(&database_url).await?;
+    let state = AppState::new(db, conf);
+
+    let mut app = tide::with_state(state);
 
     routes::v1::register(&mut app);
+    routes::admin::register(&mut app);
 
     app.at("/")
-        .get(|_| async { Ok(format!("Riverbank {}", env!["CARGO_PKG_VERSION"])) });
+        .get(|req: tide::Request<AppState<'static>>| async move {
+            req.state().render("index", None).await
+        });
 
     #[cfg(debug_assertions)]
     {

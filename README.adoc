@@ -28,6 +28,9 @@ toc::[]
 | Querying tables
 | :heavy_check_mark:
 
+| Paginated responses
+| :x:
+
 |===
 
 
