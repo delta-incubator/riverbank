@@ -176,7 +176,7 @@ impl Table {
     pub fn protocol(&mut self) -> Result<Protocol, DeltaTableError> {
         if let Some(delta) = &self.delta_table {
             return Ok(Protocol {
-                min_reader: delta.get_min_reader_version(),
+                min_reader_version: delta.get_min_reader_version(),
             });
         }
         Err(DeltaTableError::NotATable)
@@ -379,7 +379,7 @@ pub struct PrimitiveTable {
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Protocol {
-    min_reader: i32,
+    min_reader_version: i32,
 }
 
 #[derive(Clone, Debug, Serialize)]
