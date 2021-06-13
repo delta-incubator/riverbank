@@ -229,6 +229,7 @@ impl Table {
                         key: s3obj.key.to_string(),
                         ..Default::default()
                     };
+                    debug!("get request: {:?}", req);
                     let url = req.get_presigned_url(&region, &credentials, &options);
                     urls.push(json!({
                         "file" : {

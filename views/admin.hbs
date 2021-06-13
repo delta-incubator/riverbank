@@ -36,7 +36,9 @@
                     <ul>
                         {{#each tokens}}
                             <li>
-                                <code>{{this.name}}</code> expires at: {{this.expires_at}}
+                                <strong>{{this.name}}</strong> expires at: {{this.expires_at}}
+                                <br/>
+                                <input id="token_{{this.name}}" type="password" width="50" value="{{this.token}}"/> <small><a href="#" onclick="document.getElementById('token_{{this.name}}').setAttribute('type', 'text'); return false;">view</a></small>
                             </li>
                         {{/each}}
                     </ul>
