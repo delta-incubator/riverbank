@@ -51,6 +51,37 @@ AWS_ACCESS_KEY_ID=foo
 AWS_SECRET_ACCESS_KEY=bar
 ----
 
+=== Environment Variables
+
+|===
+| Name | Required | Description
+
+| `AWS_REGION`
+| yes
+| AWS region for S3 buckets
+
+| `AWS_ACCESS_KEY_ID`
+| yes
+| IAM access key
+
+| `AWS_SECRET_ACCESS_KEY`
+| yes
+| IAM secret access key
+
+| `RIVERBANK_ADMIN`
+| yes
+| Username for the built-in admin user (e.g. `root` or `admin`)
+
+| `RIVERBANK_PASSWORD`
+| yes
+| Password for the built-in admin user
+
+| `RIVERBANK_URL`
+| no
+| Client-facing URL for generating share links (e.g. `http://example.com/api/v1`)
+
+|===
+
 In production, download a pre-built release and set up your configuration files
 appropriately.
 
