@@ -20,9 +20,11 @@ impl AppState<'_> {
     pub fn new(db: PgPool, config: Config) -> Self {
         let mut users = HashMap::new();
         users.insert(
-            "admin".to_string(),
+            std::env::var("RIVERBANK_ADMIN")
+                .expect("Must define the RIVERBANK_ADMIN environment variable"),
             User {
-                password: "admin".to_string(),
+                password: std::env::var("RIVERBANK_PASSWORD")
+                    .expect("Must define the RIVERBANK_PASSWORD environment variable"),
             },
         );
         Self {

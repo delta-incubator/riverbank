@@ -407,7 +407,7 @@ impl Metadata {
 pub struct Token {
     id: Uuid,
     pub name: String,
-    token: String,
+    pub token: String,
     pub expires_at: DateTime<Utc>,
     created_at: DateTime<Utc>,
 }
@@ -421,6 +421,12 @@ impl Token {
         )
         .fetch_all(db)
         .await
+    }
+
+    pub async fn by_id(id: &Uuid, db: &PgPool) -> Result<Token, sqlx::Error> {
+        sqlx::query_as!(Token, r#"SELECT * FROM tokens WHERE id = $1"#, id)
+            .fetch_one(db)
+            .await
     }
 
     pub async fn generate(name: &str, tables: &[Uuid], db: &PgPool) -> Result<Token, sqlx::Error> {

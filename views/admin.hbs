@@ -38,7 +38,12 @@
                             <li>
                                 <strong>{{this.name}}</strong> expires at: {{this.expires_at}}
                                 <br/>
-                                <input id="token_{{this.name}}" type="password" width="50" value="{{this.token}}"/> <small><a href="#" onclick="document.getElementById('token_{{this.name}}').setAttribute('type', 'text'); return false;">view</a></small>
+                                <input id="token_{{this.name}}" type="password" width="50" value="{{this.token}}"/>
+                                <small>
+                                    <a href="#" onclick="document.getElementById('token_{{this.name}}').setAttribute('type', 'text'); return false;">View token</a>
+                                    <br/>
+                                    <a href="/admin/tokens/share/{{this.id}}" download="{{this.name}}.share">Download share profile</a>
+                                </small>
                             </li>
                         {{/each}}
                     </ul>

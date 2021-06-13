@@ -32,6 +32,7 @@ pub fn register(app: &mut tide::Server<AppState<'static>>) {
     admin.with(AdminAuthentication {});
     admin.at("/").get(index);
     admin.at("/tokens").post(create_token);
+    admin.at("/tokens/share/:id").get(download_share);
     admin.at("/tables").post(create_table);
     admin.at("/schemas").post(create_schema);
     app.at("/admin").nest(admin);
@@ -65,6 +66,17 @@ async fn create_token(mut req: Request<AppState<'_>>) -> Result<tide::Response, 
         debug!("created: {:?}", token);
     }
     Ok(tide::Redirect::new("/admin").into())
+}
+
+async fn download_share(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
+    let token_id: Uuid = Uuid::parse_str(req.param("id")?)?;
+    let token = Token::by_id(&token_id, &req.state().db).await?;
+
+    Ok(json!({
+        "shareCredentialsVersion" : 1,
+        "bearerToken" : token.token,
+        "endpoint" : std::env::var("RIVERBANK_URL").unwrap_or("http://localhost:8000/api/v1".to_string()),
+    }).into())
 }
 
 async fn create_table(mut req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error> {
