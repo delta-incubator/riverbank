@@ -14,7 +14,7 @@ toc::[]
 | Feature | Status
 
 | Bearer authentication security
-| :x:
+| :heavy_check_mark:
 
 | Configuring shares
 | :heavy_check_mark:
