@@ -75,7 +75,7 @@ async fn download_share(req: Request<AppState<'_>>) -> Result<Body, tide::Error>
     Ok(json!({
         "shareCredentialsVersion" : 1,
         "bearerToken" : token.token,
-        "endpoint" : std::env::var("RIVERBANK_URL").unwrap_or("http://localhost:8000/api/v1".to_string()),
+        "endpoint" : std::env::var("RIVERBANK_URL").unwrap_or_else(|_| "http://localhost:8000/api/v1".to_string()),
     }).into())
 }
 
