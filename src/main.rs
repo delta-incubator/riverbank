@@ -22,6 +22,8 @@ async fn main() -> Result<(), tide::Error> {
     let db = PgPool::connect(&database_url).await?;
     let state = AppState::new(db, conf);
 
+    state.register_templates().await?;
+
     let mut app = tide::with_state(state);
 
     routes::v1::register(&mut app);

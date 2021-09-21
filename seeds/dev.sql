@@ -100,7 +100,8 @@ CREATE TABLE public.tokens (
     id uuid DEFAULT public.gen_random_uuid() NOT NULL,
     token text NOT NULL,
     expires_at timestamp with time zone DEFAULT (now() + '30 days'::interval) NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    name text NOT NULL
 );
 
 
@@ -127,6 +128,7 @@ ALTER TABLE public.tokens_for_tables OWNER TO postgres;
 COPY public._sqlx_migrations (version, description, installed_on, success, checksum, execution_time) FROM stdin;
 20210530213127	simple tokens	2021-05-30 21:51:02.339722+00	t	\\x169f48de73792104d974bb0793b6cd4ca6dce759e75000a883d5cbc387b291d2838c619eda7362cd4d312d329acf8427	50215984
 20210530215400	location for tables	2021-05-30 21:55:21.35334+00	t	\\xed47e0f38faaab6a4f4dc2f3854f0b55aa4d30d2ffe7dbc603e45bc343a2447ca6e76dbe5d4faed0c58d1836812ac2e3	2154908
+20210531181347	tokens have names	2021-05-31 18:13:47.12345+00	t	\\x338adbcd6080771ac316b3d23a01bbebec15b446795e5441d627121d3e5bb85519fe75a2ce5f0c39ec8b4304fb8b2dcc	40000000
 \.
 
 
@@ -161,7 +163,7 @@ COPY public.tables (id, name, schema_id, created_at, location) FROM stdin;
 -- Data for Name: tokens; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.tokens (id, token, expires_at, created_at) FROM stdin;
+COPY public.tokens (id, token, expires_at, created_at, name) FROM stdin;
 \.
 
 
