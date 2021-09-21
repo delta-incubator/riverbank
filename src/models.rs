@@ -55,7 +55,6 @@ impl Share {
         .await?;
         Share::by_id(&record.id, db).await
     }
-
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -434,8 +433,8 @@ impl Token {
         .fetch_all(db)
         .await?;
 
-         debug!("tokens from list_all: {:?}", tokens);
-         Ok(tokens)
+        debug!("tokens from list_all: {:?}", tokens);
+        Ok(tokens)
     }
 
     pub async fn by_id(id: &Uuid, db: &PgPool) -> Result<Token, sqlx::Error> {
