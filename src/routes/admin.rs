@@ -35,6 +35,7 @@ pub fn register(app: &mut tide::Server<AppState<'static>>) {
     admin.at("/tokens/share/:id").get(download_share);
     admin.at("/tables").post(create_table);
     admin.at("/schemas").post(create_schema);
+    admin.at("/shares").post(create_share);
     app.at("/admin").nest(admin);
 }
 
@@ -108,6 +109,18 @@ async fn create_schema(mut req: Request<AppState<'_>>) -> Result<tide::Response,
 
     let create: CreateSchema = req.body_form().await?;
     Schema::create(&create.name, &create.share, &req.state().db).await?;
+
+    Ok(tide::Redirect::new("/admin").into())
+}
+
+async fn create_share(mut req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error> {
+    #[derive(Deserialize, Debug)]
+    struct CreateShare {
+        name: String,
+    }
+
+    let create: CreateShare = req.body_form().await?;
+    Share::create(&create.name, &req.state().db).await?;
 
     Ok(tide::Redirect::new("/admin").into())
 }

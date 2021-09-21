@@ -375,6 +375,50 @@
       ]
     }
   },
+  "90957a5f4c92a6fd686f3230d786a99ecadb35a1532276d62d49e39b7c2d7609": {
+    "query": "SELECT * FROM tokens WHERE id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Uuid"
+        },
+        {
+          "ordinal": 1,
+          "name": "token",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "expires_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 3,
+          "name": "created_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "name",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "96b309274790960ac9b8bd8a8a5380d439a303b03eed2b6f4b8f8c1b3ef9bb20": {
     "query": "INSERT INTO tokens_for_tables (token_id, table_id) VALUES ($1, $2)",
     "describe": {
@@ -386,6 +430,26 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "9e139ff82a4ba0c1598a899b7c1b5f88c046cec300c9d35d728823415d108c0f": {
+    "query": "INSERT INTO shares (name)\n                VALUES ($1) RETURNING id",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Uuid"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
     }
   },
   "a099aaeecb1b0d32c9f53d9804368fbbcbc7960b8a8c363a695db8e6cd2dfdbc": {

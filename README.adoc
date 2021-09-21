@@ -91,4 +91,34 @@ link:https://github.com/passcod/cargo-watch[cargo-watch] installed `catflap -p
 8000 -- cargo watch -x run` which will start up the development server at
 `localhost:8000`.
 
+Or you can use the provided docker-compose file to start the database and the riverbank server
+
+```bash
+docker-compose up --build --force-recreate && docker-compose down --volumes
+```
+
 You can use the API documentation at link:http://localhost:8000/apidocs/index.html[localhost:8000/apidocs/index.html].
+
+== SQLX data json update
+
+=== Start the test postgres db
+
+```bash
+docker-compose up db
+```
+
+=== Start a rust docker environment
+
+```bash
+docker run -ti -v $(pwd):/src rust:1.54 /bin/bash
+```
+
+Inside this container you can update/crete the sqlx-data.json file
+
+```bash
+export DATABASE_URL=postgres://postgres:supersecretpassword@host.docker.internal:5432/riverbank
+cd /src
+
+cargo install sqlx-cli
+cargo sqlx prepare
+```

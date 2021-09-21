@@ -44,6 +44,18 @@ impl Share {
             .fetch_one(db)
             .await
     }
+
+    pub async fn create(name: &str, db: &PgPool) -> Result<Share, sqlx::Error> {
+        let record = sqlx::query!(
+            r#"INSERT INTO shares (name)
+                VALUES ($1) RETURNING id"#,
+            name
+        )
+        .fetch_one(db)
+        .await?;
+        Share::by_id(&record.id, db).await
+    }
+
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -317,7 +329,7 @@ impl Table {
         token_id: &Uuid,
         db: &PgPool,
     ) -> Result<Table, sqlx::Error> {
-        let schema = Schema::find(&share, &schema, db).await?;
+        let found_schema = Schema::find(&share, &schema, db).await?;
 
         let inner = sqlx::query_as!(
             PrimitiveTable,
@@ -328,7 +340,7 @@ impl Table {
                     AND tables.id = tokens_for_tables.table_id
                     AND tokens_for_tables.token_id = $3
                 "#,
-            schema.id,
+            found_schema.id,
             table,
             token_id
         )
@@ -337,7 +349,7 @@ impl Table {
 
         Ok(Table {
             inner,
-            schema,
+            schema: found_schema,
             delta_table: None,
         })
     }
@@ -414,13 +426,16 @@ pub struct Token {
 
 impl Token {
     pub async fn list_all(db: &PgPool) -> Result<Vec<Token>, sqlx::Error> {
-        sqlx::query_as!(
+        let tokens = sqlx::query_as!(
             Token,
             r#"SELECT * FROM tokens
                 WHERE expires_at > NOW() ORDER BY created_at"#
         )
         .fetch_all(db)
-        .await
+        .await?;
+
+         debug!("tokens from list_all: {:?}", tokens);
+         Ok(tokens)
     }
 
     pub async fn by_id(id: &Uuid, db: &PgPool) -> Result<Token, sqlx::Error> {

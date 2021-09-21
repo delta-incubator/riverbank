@@ -93,7 +93,7 @@ async fn list_tables(req: Request<AppState<'_>>) -> Result<Body, tide::Error> {
     let mut tables = PaginatedResponse::default();
     let tokened = req.ext::<Tokened>().unwrap();
 
-    for table in Table::list_by_token(named_share, named_schema, &tokened.id, db).await? {
+    for table in Table::list_by_token(&named_share, &named_schema, &tokened.id, db).await? {
         tables.items.push(json!({
             "name" : table.name(),
             "share" : table.share(),
@@ -118,7 +118,7 @@ async fn latest_version(req: Request<AppState<'_>>) -> Result<tide::Response, ti
     let tokened = req.ext::<Tokened>().unwrap();
 
     // TODO: handle 404
-    let mut table = Table::find(named_share, named_schema, named_table, &tokened.id, &db).await?;
+    let mut table = Table::find(&named_share, &named_schema, &named_table, &tokened.id, db).await?;
     table.load_delta().await?;
 
     return Ok(tide::Response::builder(200)
@@ -145,7 +145,7 @@ async fn table_metadata(req: Request<AppState<'_>>) -> Result<tide::Response, ti
     // TODO 404
 
     let db = &req.state().db;
-    let mut table = Table::find(named_share, named_schema, named_table, &tokened.id, &db).await?;
+    let mut table = Table::find(&named_share, &named_schema, &named_table, &tokened.id, db).await?;
     table.load_delta().await?;
 
     let metadata = json!({"metaData" : table.metadata()?});
@@ -172,7 +172,7 @@ async fn query(req: Request<AppState<'_>>) -> Result<tide::Response, tide::Error
     let tokened = req.ext::<Tokened>().unwrap();
 
     let db = &req.state().db;
-    let mut table = Table::find(named_share, named_schema, named_table, &tokened.id, &db).await?;
+    let mut table = Table::find(&named_share, &named_schema, &named_table, &tokened.id, db).await?;
     table.load_delta().await?;
 
     let metadata = json!({"metaData" : table.metadata()?});

@@ -10,3 +10,19 @@ services:
     environment:
       POSTGRES_DB: riverbank
       POSTGRES_PASSWORD: supersecretpassword
+
+  delta:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["wait-for-it", "db:5432", "--timeout=60", "--", "/usr/src/riverbank"]
+    ports:
+      - 8000:8000
+    environment:
+      - RIVERBANK_ADMIN=admin
+      - RIVERBANK_PASSWORD=admin
+      - DATABASE_URL=postgres://postgres:supersecretpassword@db:5432/riverbank
+      - RUST_LOG=debug
+    depends_on:
+      - db
+
