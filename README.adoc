@@ -1,6 +1,18 @@
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
 :toc: macro
 
 = Riverbank
+
+[WARNING]
+====
+Development on Riverbank has stopped, please consider link:https://github.com/delta-incubator/delta-sharing-rs[delta-sharing-rs] instead.
+====
 
 Riverbank is a Delta Sharing Server implemented in Rust. The Delta Sharing
 Protocol is still very early on and so this project may see significant
